@@ -94,10 +94,10 @@ function blocoNoticias(p, dados) {
       h('li', {},
         h('a', { href: n.url, target: '_blank', rel: 'noopener noreferrer' }, n.titulo),
         h('small', {}, [n.fonte, fmtData(n.data)].filter(Boolean).join(' · '))))),
-    h('p', { class: 'fraco' }, `Coletado em ${fmtData(reg.buscadoEm)} via GDELT.`));
+    h('p', { class: 'fraco' }, `Dos feeds RSS de ${(dados.noticias.fontes ?? []).join(', ')}. Atualizado em ${fmtData(reg.buscadoEm)}.`));
   } else {
     sec.append(h('p', { class: 'fraco' }, reg
-      ? 'A coleta automática não encontrou matérias nos últimos 3 meses.'
+      ? 'Nenhuma manchete recente dos veículos acompanhados cita este nome junto de termos de investigação.'
       : 'Ainda não há coleta automática para este nome. Use as buscas abaixo.'));
   }
 

@@ -1,6 +1,23 @@
 {
   "_leiame": "Dados sem fonte automática. Presidente e vice mudam a cada 4 anos (posse em 1º de janeiro); 'wiki' é o título do artigo na Wikipédia em português, usado só pra buscar a foto. Em 'partidos', a chave é o nome exatamente como aparece no site e o valor é a sigla (ou \"sem partido\").",
-  "presidente": { "nome": "Luiz Inácio Lula da Silva", "apelido": "Lula", "partido": "PT", "desde": "2023-01-01", "wiki": "Luiz Inácio Lula da Silva" },
-  "vice": { "nome": "Geraldo Alckmin", "partido": "PSB", "desde": "2023-01-01", "wiki": "Geraldo Alckmin" },
-  "partidos": {}
+  "presidente": {
+    "nome": "Luiz Inácio Lula da Silva",
+    "apelido": "Lula",
+    "partido": "PT",
+    "desde": "2023-01-01",
+    "wiki": "Luiz Inácio Lula da Silva"
+  },
+  "vice": {
+    "nome": "Geraldo Alckmin",
+    "partido": "PSB",
+    "desde": "2023-01-01",
+    "wiki": "Geraldo Alckmin"
+  },
+  "partidos": {
+    "Miriam Belchior": "PT",
+    "José Nobre Guimarães": "PT",
+    "Janine Mello dos Santos": "sem partido",
+    "João Paulo Ribeiro Capobianco": "sem partido"
+  },
+  "_partidos_fonte": "Conferido em 2026-10-05 nos artigos da Wikipédia em português de cada pessoa. Janine Mello consta como independente; Capobianco foi filiado ao PV até 2011."
 }

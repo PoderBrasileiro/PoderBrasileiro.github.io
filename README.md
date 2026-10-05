@@ -18,7 +18,7 @@ npm run dev        # abre em http://localhost:5173
 
 ```bash
 npm run coletar    # cargos, mapa e votações  -> public/data/brasil.json, malha.json
-npm run noticias   # notícias por nome (lento) -> public/data/noticias.json
+npm run noticias   # manchetes dos feeds RSS    -> public/data/noticias.json (acumula a cada rodada)
 ```
 
 `coletar` aborta sem gravar nada se alguma contagem vier errada (27 UFs, 27
@@ -33,7 +33,7 @@ de uma tabela da Wikipédia, e se o formato dela mudar o parser quebra.
 | Mapa e UFs | IBGE |
 | Presidente e vice | `data/manual.json` |
 | Posição dos partidos | `data/partidos.json` |
-| Notícias | GDELT |
+| Notícias | feeds RSS dos veículos (G1, Folha, Estadão, Agência Brasil, Poder360 e outros) |
 
 ## O que editar à mão
 
