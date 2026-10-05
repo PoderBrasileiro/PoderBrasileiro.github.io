@@ -1,0 +1,42 @@
+{
+  "_fonte": "Bolognesi, Ribeiro e Codato (2023), 'Uma Nova Classificação Ideológica dos Partidos Políticos Brasileiros', revista Dados 66(2). Survey com cientistas políticos; escala de 0 (extrema-esquerda) a 10 (extrema-direita).",
+  "_atencao": "Os valores abaixo foram transcritos de memória e PRECISAM ser conferidos com a Tabela do artigo antes de publicar o site. Partidos criados por fusão depois do survey (origem 'estimado') não constam no artigo: o valor é a média dos partidos que se fundiram.",
+  "partidos": {
+    "PSTU": { "nome": "Partido Socialista dos Trabalhadores Unificado", "posicao": 0.51, "origem": "artigo" },
+    "PCO": { "nome": "Partido da Causa Operária", "posicao": 0.61, "origem": "artigo" },
+    "PCB": { "nome": "Partido Comunista Brasileiro", "posicao": 0.91, "origem": "artigo" },
+    "PSOL": { "nome": "Partido Socialismo e Liberdade", "posicao": 1.28, "origem": "artigo" },
+    "PCdoB": { "nome": "Partido Comunista do Brasil", "posicao": 1.92, "origem": "artigo" },
+    "PT": { "nome": "Partido dos Trabalhadores", "posicao": 2.97, "origem": "artigo" },
+    "PDT": { "nome": "Partido Democrático Trabalhista", "posicao": 3.92, "origem": "artigo" },
+    "PSB": { "nome": "Partido Socialista Brasileiro", "posicao": 4.05, "origem": "artigo" },
+    "REDE": { "nome": "Rede Sustentabilidade", "posicao": 4.77, "origem": "artigo" },
+    "CIDADANIA": { "nome": "Cidadania", "posicao": 4.92, "origem": "artigo", "nota": "No artigo aparece como PPS." },
+    "PV": { "nome": "Partido Verde", "posicao": 5.29, "origem": "artigo" },
+    "AVANTE": { "nome": "Avante", "posicao": 6.32, "origem": "artigo" },
+    "SOLIDARIEDADE": { "nome": "Solidariedade", "posicao": 6.5, "origem": "artigo" },
+    "MDB": { "nome": "Movimento Democrático Brasileiro", "posicao": 7.01, "origem": "artigo" },
+    "PSD": { "nome": "Partido Social Democrático", "posicao": 7.09, "origem": "artigo" },
+    "PSDB": { "nome": "Partido da Social Democracia Brasileira", "posicao": 7.11, "origem": "artigo" },
+    "PODE": { "nome": "Podemos", "posicao": 7.24, "origem": "artigo" },
+    "REPUBLICANOS": { "nome": "Republicanos", "posicao": 7.78, "origem": "artigo", "nota": "No artigo aparece como PRB." },
+    "PL": { "nome": "Partido Liberal", "posicao": 7.78, "origem": "artigo", "nota": "No artigo aparece como PR." },
+    "DC": { "nome": "Democracia Cristã", "posicao": 8.11, "origem": "artigo" },
+    "NOVO": { "nome": "Partido Novo", "posicao": 8.13, "origem": "artigo" },
+    "PP": { "nome": "Progressistas", "posicao": 8.2, "origem": "artigo" },
+    "UNIÃO": { "nome": "União Brasil", "posicao": 8.34, "origem": "estimado", "nota": "Fusão de DEM (8,57) e PSL (8,11) em 2022; média dos dois." },
+    "PRD": { "nome": "Partido Renovação Democrática", "posicao": 7.33, "origem": "estimado", "nota": "Fusão de PTB (6,10) e Patriota (8,55) em 2023; média dos dois." }
+  },
+  "apelidos": {
+    "PODEMOS": "PODE",
+    "UNIAO": "UNIÃO",
+    "UNIÃO BRASIL": "UNIÃO",
+    "PC DO B": "PCdoB",
+    "PCDOB": "PCdoB",
+    "PROGRESSISTAS": "PP",
+    "SD": "SOLIDARIEDADE",
+    "SEM PARTIDO": null,
+    "S/PARTIDO": null,
+    "S.PART.": null
+  }
+}

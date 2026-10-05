@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PoderBR — quem ocupa o poder no Brasil</title>
+  <meta name="description" content="Mapa e rede interativos de presidente, vice, ministros, governadores e senadores do Brasil, com dados públicos.">
+  <link rel="stylesheet" href="/src/style.css">
+</head>
+<body>
+  <header class="topo">
+    <div class="marca">
+      <h1>PoderBR</h1>
+      <p>Quem ocupa o poder no Brasil, com dados públicos.</p>
+    </div>
+    <div class="busca">
+      <label class="so-leitor" for="busca">Buscar político</label>
+      <input id="busca" type="search" placeholder="Buscar por nome, partido ou pasta…" autocomplete="off">
+      <ul id="busca-resultados" class="busca-resultados" hidden></ul>
+    </div>
+    <nav class="abas" role="tablist" aria-label="Visualizações">
+      <button role="tab" data-aba="mapa" aria-selected="true">Mapa</button>
+      <button role="tab" data-aba="rede" aria-selected="false">Rede de poder</button>
+      <button role="tab" data-aba="lista" aria-selected="false">Lista</button>
+    </nav>
+  </header>
+
+  <main class="palco">
+    <section class="vis" aria-live="polite">
+      <div id="vis-mapa" class="aba-conteudo"></div>
+      <div id="vis-rede" class="aba-conteudo" hidden></div>
+      <div id="vis-lista" class="aba-conteudo" hidden></div>
+      <div id="legenda" class="legenda"></div>
+    </section>
+    <aside id="painel" class="painel" aria-label="Detalhes"></aside>
+  </main>
+
+  <footer class="rodape">
+    <details>
+      <summary>Fontes e metodologia</summary>
+      <div id="metodologia"></div>
+    </details>
+    <p id="atualizado" class="fraco"></p>
+  </footer>
+
+  <div id="dica" class="dica" hidden></div>
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
