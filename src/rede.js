@@ -1,109 +1,126 @@
-// Rede de poder: árvore radial de bolinhas.
+// Rede de poder: um quadro com os três poderes nas colunas e os três níveis
+// da federação nas linhas. Cada bolinha é uma pessoa; dentro de cada grupo
+// elas vão ordenadas pela posição do partido, da esquerda pra direita.
 //
-//   República ─┬─ Presidente ─┬─ Vice
-//              │              └─ ministros
-//              └─ regiões ─ UFs ─┬─ governador
-//                                └─ senadores
-//
-// Tamanho da bolinha = cargo; cor = posição do partido.
+// Já foi uma árvore radial. Ficava bonita e ilegível: 150 bolinhas iguais
+// num círculo, sem dizer quem era de qual poder. O quadro responde isso de
+// cara, e as células sem dados dizem o que o site NÃO cobre.
 
-import * as d3 from 'd3';
-import { CARGOS, corDe, defsHachura, mostrarDica, esconderDica, textoPartido, ondeAtua } from './comum.js';
+import { h, CARGOS, SITUACOES, destinoDe, posicaoDe, mostrarDica, esconderDica, textoPartido, ondeAtua } from './comum.js';
 
-const R = 360;
+const DIAMETRO = { presidente: 30, vice: 24, ministro: 16, governador: 20, senador: 14, deputado: 10, stf: 20 };
 
-function montarArvore(dados) {
-  const folha = (p) => ({ tipo: 'pessoa', pessoa: p });
-  const presidente = dados.pessoaPorId.get('presidente');
-  const executivo = {
-    ...folha(presidente),
-    children: dados.pessoas.filter((p) => p.cargo === 'vice' || p.cargo === 'ministro').map(folha),
-  };
-  const regioes = d3.groups(dados.ufs, (u) => u.regiao).map(([regiao, ufs]) => ({
-    tipo: 'grupo', rotulo: regiao,
-    children: ufs.map((u) => ({
-      tipo: 'uf', rotulo: u.sigla, uf: u,
-      children: dados.pessoas
-        .filter((p) => p.uf === u.sigla)
-        .sort((a, b) => (a.cargo === 'governador' ? -1 : 1) - (b.cargo === 'governador' ? -1 : 1))
-        .map(folha),
-    })),
-  }));
-  return { tipo: 'raiz', rotulo: 'República', children: [executivo, ...regioes] };
-}
+export function criarRede(raiz, dados, { aoEscolherPessoa, aoVerMapa }) {
+  const bolinhas = [];   // { el, pessoa }
 
-export function criarRede(raiz, dados, { aoEscolherPessoa, aoEscolherUf }) {
-  const arvore = d3.hierarchy(montarArvore(dados));
-  d3.tree().size([2 * Math.PI, R]).separation((a, b) => (a.parent === b.parent ? 1 : 1.6) / a.depth)(arvore);
+  function bolinha(p) {
+    const d = DIAMETRO[p.cargo];
+    const el = h('button', {
+      class: 'b', style: `width:${d}px;height:${d}px`,
+      'aria-label': `${p.nome}, ${CARGOS[p.cargo].curto}, ${ondeAtua(p, dados)}, ${textoPartido(p)}`,
+      onclick: () => aoEscolherPessoa(p.id),
+      'data-sit': destinoDe(p, dados)?.situacao,
+      onpointermove: (ev) => {
+        const d = destinoDe(p, dados);
+        mostrarDica(ev, [p.nome, `${CARGOS[p.cargo].curto} · ${ondeAtua(p, dados)}`, textoPartido(p),
+          d ? `${SITUACOES[d.situacao].icone} ${SITUACOES[d.situacao].rotulo}` : null].filter(Boolean));
+      },
+      onpointerleave: esconderDica,
+    });
+    bolinhas.push({ el, pessoa: p });
+    return el;
+  }
 
-  // O Executivo tem um nível a menos que os estados; sem isto os ministros
-  // ficariam a meio caminho do centro, embolados.
-  arvore.each((n) => {
-    if (n.data.tipo === 'pessoa' && n.data.pessoa.cargo !== 'presidente') n.y = R;
-    if (n.data.tipo === 'pessoa' && n.data.pessoa.cargo === 'presidente') n.y = R * 0.45;
+  // Bolinha com nome embaixo, pros poucos cargos em que cabe.
+  const comNome = (p, rotulo) => h('div', { class: 'b-nome' }, bolinha(p), h('span', {}, rotulo ?? p.nome));
+
+  const doCargo = (cargo) => dados.pessoas.filter((p) => p.cargo === cargo)
+    .sort((a, b) => (posicaoDe(a, dados) ?? 99) - (posicaoDe(b, dados) ?? 99) || a.nome.localeCompare(b.nome, 'pt'));
+
+  const grupo = (titulo, conteudo, nota) => h('div', { class: 'q-grupo' },
+    h('h4', {}, titulo), conteudo, nota ? h('p', { class: 'q-nota' }, nota) : null);
+  const nuvem = (cargo) => h('div', { class: 'q-nuvem' }, doCargo(cargo).map(bolinha));
+  const fora = (titulo, texto) => h('div', { class: 'q-grupo q-fora' }, h('h4', {}, titulo), h('p', { class: 'q-nota' }, texto));
+
+  const n = (cargo) => dados.pessoas.filter((p) => p.cargo === cargo).length;
+  const stf = dados.pessoas.filter((p) => p.cargo === 'stf');
+  const prefeitos = h('p', { class: 'q-nota' }, 'Carregando…');
+
+  const celula = (...filhos) => h('div', { class: 'q-celula' }, filhos);
+  const nivel = (nome, sub) => h('div', { class: 'q-nivel' }, h('b', {}, nome), h('small', {}, sub));
+  const poder = (nome, sub) => h('div', { class: 'q-poder' }, h('b', {}, nome), h('small', {}, sub));
+
+  // Liga/desliga a leitura "quem fica, quem sai": a cor continua sendo o
+  // partido; o que muda é o contorno e a opacidade de cada bolinha.
+  const legendaTransicao = h('div', { class: 'q-legenda', hidden: true },
+    Object.entries(SITUACOES).map(([s, v]) => h('span', {}, h('i', { class: 'b', 'data-sit': s }), `${v.icone} ${v.rotulo}`)));
+  const chave = dados.eleicao ? h('button', { class: 'q-chave', 'aria-pressed': 'false' }, '⇄ Transição 2027') : null;
+  chave?.addEventListener('click', () => {
+    const ligado = quadro.classList.toggle('transicao');
+    chave.setAttribute('aria-pressed', String(ligado));
+    legendaTransicao.hidden = !ligado;
   });
 
-  const lado = (R + 70) * 2;
-  const svg = d3.create('svg').attr('viewBox', [-lado / 2, -lado / 2, lado, lado]).attr('role', 'img')
-    .attr('aria-label', 'Árvore radial do poder: do centro saem o Executivo federal e as cinco regiões, com estados, governadores e senadores. A aba Lista traz os mesmos dados em tabela.');
-  defsHachura(svg);
-  const palco = svg.append('g');
-  svg.call(d3.zoom().scaleExtent([0.8, 6]).on('zoom', (ev) => palco.attr('transform', ev.transform)));
+  const quadro = h('div', { class: 'quadro' },
+    h('div', { class: 'q-topo' }, h('div', { class: 'q-raiz' }, 'República Federativa do Brasil'), chave),
+    legendaTransicao,
+    h('div', { class: 'q-grade' },
+      h('div', {}),
+      poder('Executivo', 'governa e executa as leis'),
+      poder('Legislativo', 'faz as leis e fiscaliza'),
+      poder('Judiciário', 'julga conforme as leis'),
 
-  const xy = (n) => [n.y * Math.cos(n.x - Math.PI / 2), n.y * Math.sin(n.x - Math.PI / 2)];
+      nivel('União', 'o país inteiro'),
+      celula(
+        h('div', { class: 'q-grupo' }, h('h4', {}, 'Presidência'),
+          h('div', { class: 'q-destaques' },
+            comNome(dados.pessoaPorId.get('presidente'), `${dados.pessoaPorId.get('presidente').nome} · presidente`),
+            comNome(dados.pessoaPorId.get('vice'), `${dados.pessoaPorId.get('vice').nome} · vice`))),
+        grupo(`Ministros (${n('ministro')})`, nuvem('ministro'))),
+      celula(
+        grupo(`Senado (${n('senador')})`, nuvem('senador'), '3 senadores por estado'),
+        grupo(`Câmara dos Deputados (${n('deputado')})`, nuvem('deputado'), 'bancada proporcional à população do estado')),
+      celula(
+        grupo(`Supremo Tribunal Federal (${stf.length} de 11)`,
+          h('div', { class: 'q-destaques q-stf' }, stf.map((p) => comNome(p, p.funcao ? `${p.nome} · ${p.funcao}` : p.nome))),
+          'Ministros do STF não têm partido. São indicados pelo presidente e aprovados pelo Senado.'),
+        fora('Demais tribunais', 'STJ, TSE, TST, STM e a Justiça Federal não estão neste site.')),
 
-  palco.append('g').attr('class', 'elos').selectAll('path').data(arvore.links()).join('path')
-    .attr('d', d3.linkRadial().angle((n) => n.x).radius((n) => n.y));
+      nivel('Estados', '26 estados e o DF'),
+      celula(grupo(`Governadores (${n('governador')})`,
+        h('div', { class: 'q-destaques q-gov' }, doCargo('governador').map((p) => comNome(p, p.uf))))),
+      celula(fora('Assembleias legislativas', 'Deputados estaduais não estão neste site.')),
+      celula(fora('Tribunais de Justiça', 'A Justiça estadual não está neste site.')),
 
-  const nos = palco.append('g').selectAll('g').data(arvore.descendants()).join('g')
-    .attr('class', (n) => `no no-${n.data.tipo}`)
-    .attr('transform', (n) => `translate(${xy(n)})`);
+      nivel('Municípios', '5.569 cidades'),
+      celula(h('div', { class: 'q-grupo' }, h('h4', {}, 'Prefeitos'), prefeitos,
+        h('button', { class: 'botao', onclick: aoVerMapa }, 'Ver no mapa'))),
+      celula(fora('Câmaras municipais', 'Vereadores não estão neste site.')),
+      celula(fora('—', 'Não existe Judiciário municipal: as cidades são atendidas pela Justiça estadual.'))));
 
-  const raioDe = (n) => (n.data.tipo === 'pessoa' ? CARGOS[n.data.pessoa.cargo].raio : n.data.tipo === 'raiz' ? 6 : 3.5);
-
-  // Alvo de clique maior que a marca: bolinha de 5px é difícil de acertar.
-  nos.filter((n) => n.data.tipo !== 'grupo' && n.data.tipo !== 'raiz').append('circle')
-    .attr('class', 'alvo').attr('r', (n) => Math.max(raioDe(n) + 4, 10));
-
-  const marcas = nos.append('circle').attr('class', 'marca').attr('r', raioDe);
-
-  nos.filter((n) => n.data.tipo !== 'pessoa' || n.data.pessoa.cargo === 'presidente')
-    .append('text')
-    .attr('dy', '0.32em')
-    .each(function (n) {
-      const t = d3.select(this);
-      if (n.data.tipo === 'raiz') return t.attr('y', -14).attr('text-anchor', 'middle').text(n.data.rotulo);
-      if (n.data.tipo === 'pessoa') return t.attr('y', -18).attr('text-anchor', 'middle').text(n.data.pessoa.nome);
-      const esquerda = n.x > Math.PI;
-      const graus = (n.x * 180) / Math.PI - 90;
-      t.attr('transform', `rotate(${esquerda ? graus + 180 : graus})`)
-        .attr('x', esquerda ? -8 : 8)
-        .attr('text-anchor', esquerda ? 'end' : 'start')
-        .text(n.data.rotulo);
-    });
-
-  nos.filter((n) => n.data.tipo === 'pessoa')
-    .on('pointermove', (ev, n) => {
-      const p = n.data.pessoa;
-      mostrarDica(ev, [p.nome, `${CARGOS[p.cargo].curto} · ${ondeAtua(p, dados)}`, textoPartido(p)]);
-    })
-    .on('pointerleave', esconderDica)
-    .on('click', (ev, n) => aoEscolherPessoa(n.data.pessoa.id));
-
-  nos.filter((n) => n.data.tipo === 'uf')
-    .on('pointermove', (ev, n) => mostrarDica(ev, [n.data.uf.nome, 'ver governador e senadores']))
-    .on('pointerleave', esconderDica)
-    .on('click', (ev, n) => aoEscolherUf(n.data.uf.sigla));
-
-  raiz.append(svg.node());
+  raiz.append(quadro);
 
   return {
     pintar(escala) {
-      marcas.filter((n) => n.data.tipo === 'pessoa').attr('fill', (n) => corDe(n.data.pessoa, dados, escala));
+      for (const { el, pessoa } of bolinhas) {
+        const pos = posicaoDe(pessoa, dados);
+        el.classList.toggle('neutra', pessoa.cargo === 'stf');
+        el.classList.toggle('sem', pessoa.cargo !== 'stf' && pos == null);
+        el.style.background = pos == null ? '' : escala(pos);
+      }
     },
+    // Destaca a pessoa escolhida; com um estado escolhido, apaga quem é de outro.
     selecionar({ pessoa, uf }) {
-      nos.classed('ativo', (n) => (n.data.tipo === 'pessoa' && n.data.pessoa.id === pessoa)
-        || (n.data.tipo === 'uf' && n.data.uf.sigla === uf));
+      for (const b of bolinhas) {
+        b.el.classList.toggle('ativo', b.pessoa.id === pessoa);
+        b.el.classList.toggle('apagada', Boolean(uf) && Boolean(b.pessoa.uf) && b.pessoa.uf !== uf);
+      }
+    },
+    atualizarPrefeitos() {
+      const total = dados.pessoas.filter((p) => p.cargo === 'prefeito').length;
+      prefeitos.textContent = total
+        ? `${total.toLocaleString('pt-BR')} prefeitos eleitos em 2024. São bolinhas demais pra caber aqui: estão no mapa, estado por estado.`
+        : 'Dados de prefeitos indisponíveis.';
     },
   };
 }

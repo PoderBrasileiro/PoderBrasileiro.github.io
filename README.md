@@ -1,8 +1,8 @@
 # PoderBR
 
 Quadro interativo de quem ocupa o poder no Brasil: presidente, vice, ministros,
-governadores e senadores. Três visões dos mesmos dados — **mapa**, **rede de
-poder** (árvore radial de bolinhas) e **lista** — e uma ficha por pessoa com
+ministros do STF, governadores, senadores, deputados federais e prefeitos. Três visões dos mesmos dados — **mapa**, **rede de
+poder** (quadro dos três poderes × União, estados e municípios) e **lista** — e uma ficha por pessoa com
 posição esquerda × direita e links de investigações e notícias.
 
 Projeto pessoal, site estático, sem servidor.
@@ -18,6 +18,8 @@ npm run dev        # abre em http://localhost:5173
 
 ```bash
 npm run coletar    # cargos, mapa e votações  -> public/data/brasil.json, malha.json
+npm run eleicao    # transição 2027: resultado de 2026 x quem está no cargo -> eleicao2026.json
+npm run prefeitos  # prefeitos eleitos em 2024 e malhas municipais (minutos; rodar só quando precisar)
 npm run noticias   # manchetes dos feeds RSS    -> public/data/noticias.json (acumula a cada rodada)
 ```
 
@@ -28,8 +30,12 @@ de uma tabela da Wikipédia, e se o formato dela mudar o parser quebra.
 | Dado | Fonte |
 |---|---|
 | Senadores e votações | Dados Abertos do Senado |
+| Deputados federais | Dados Abertos da Câmara |
+| Ministros do STF | Wikipédia em português (o site do STF recusa acesso automático) |
 | Ministros | página oficial do Planalto (partido e foto: Wikipédia, quando é a mesma pessoa) |
 | Governadores | Wikipédia em português |
+| Prefeitos | resultado oficial do TSE, eleição de 2024 (eleitos, não necessariamente os atuais) |
+| Transição 2027 (⇄) | resultado oficial do TSE da eleição de 2026, casado por nome com os ocupantes atuais |
 | Mapa e UFs | IBGE |
 | Presidente e vice | `data/manual.json` |
 | Posição dos partidos | `data/partidos.json` |
@@ -39,9 +45,8 @@ de uma tabela da Wikipédia, e se o formato dela mudar o parser quebra.
 
 - `data/manual.json` — presidente e vice (muda na posse) e `partidos`, pra
   preencher o partido de ministro que nenhuma fonte informa.
-- `data/partidos.json` — a régua esquerda × direita de cada partido. **Os
-  valores precisam ser conferidos com o artigo citado no arquivo antes de
-  publicar.**
+- `data/partidos.json` — a régua esquerda × direita de cada partido. Os valores
+  foram conferidos com a Tabela 1 do artigo citado no arquivo.
 
 ## Cuidados
 

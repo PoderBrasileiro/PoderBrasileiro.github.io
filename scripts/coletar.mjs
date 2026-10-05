@@ -15,6 +15,7 @@
 // arquivos antigos ficam como estavam.
 
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
+import { tabelaPartidos, normalizarPartido } from './partidos.mjs';
 
 const RAIZ = new URL('..', import.meta.url);
 const SAIDA = new URL('public/data/', RAIZ);
@@ -36,22 +37,6 @@ async function lerJson(caminho) {
 function slug(s) {
   return s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
     .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-}
-
-// ---------- partidos ----------
-
-const tabelaPartidos = await lerJson('data/partidos.json');
-
-function normalizarPartido(bruto) {
-  if (!bruto) return null;
-  const s = bruto.trim();
-  if (!s || /^sem partido$/i.test(s)) return null;
-  const maiusc = s.toUpperCase();
-  if (maiusc in tabelaPartidos.apelidos) return tabelaPartidos.apelidos[maiusc];
-  // "PCdoB" é a única sigla com minúsculas; o resto vai em caixa alta.
-  const direto = Object.keys(tabelaPartidos.partidos).find((k) =>
-    k.toUpperCase() === maiusc || tabelaPartidos.partidos[k].nome.toUpperCase() === maiusc);
-  return direto ?? maiusc;
 }
 
 // ---------- wikitexto ----------
@@ -137,6 +122,7 @@ async function coletarSenadores() {
       partido: normalizarPartido(id.SiglaPartidoParlamentar),
       foto: id.UrlFotoParlamentar?.replace(/^http:/, 'https:') ?? null,
       desde: p.Mandato?.PrimeiraLegislaturaDoMandato?.DataInicio ?? null,
+      mandatoAte: (p.Mandato?.SegundaLegislaturaDoMandato ?? p.Mandato?.PrimeiraLegislaturaDoMandato)?.DataFim ?? null,
       titular: p.Mandato?.DescricaoParticipacao ?? null,
       links: { oficial: id.UrlPaginaParlamentar?.replace(/^http:/, 'https:') ?? null },
     };
@@ -356,6 +342,51 @@ async function coletarPresidencia() {
   return out;
 }
 
+// ---------- Câmara dos Deputados ----------
+
+async function coletarDeputados() {
+  const j = await json('https://dadosabertos.camara.leg.br/api/v2/deputados?itens=1000&ordem=ASC&ordenarPor=nome');
+  return j.dados.map((d) => ({
+    id: `deputado-${d.id}`,
+    cargo: 'deputado',
+    nome: d.nome,
+    uf: d.siglaUf,
+    partido: normalizarPartido(d.siglaPartido),
+    foto: d.urlFoto ?? null,
+    links: { oficial: `https://www.camara.leg.br/deputados/${d.id}` },
+  }));
+}
+
+// ---------- STF ----------
+
+// Não há API nem página do STF que aceite requisição automática (devolve 403);
+// a composição vem da predefinição que a Wikipédia usa no artigo do tribunal.
+async function coletarStf() {
+  const bruto = await wikitexto('Predefinição:Composição atual do Supremo Tribunal Federal do Brasil');
+  const out = [];
+  for (const linhaBruta of bruto.split(/\n\|-/)) {
+    const linha = limpar(linhaBruta);
+    const celulas = linha.split(/\n\|/).slice(1).map((c) => c.trim());
+    if (!/^\d+$/.test(celulas[0] ?? '')) continue;
+    const semFoto = (celulas[1] ?? '').replace(/\[\[(?:Ficheiro|Arquivo|Imagem|File):[^\]]*\]\]/gi, '');
+    const ministro = link(semFoto);
+    if (!ministro) continue;   // cadeira vaga
+    const cor = linhaBruta.match(/background:\s*(#[0-9a-f]+)/i)?.[1].toLowerCase();
+    out.push({
+      id: `stf-${slug(ministro.alvo)}`,
+      cargo: 'stf',
+      nome: ministro.alvo.replace(/\s*\(.*\)$/, ''),
+      partido: null,
+      foto: fotoCommons(arquivo(celulas[1])),
+      indicadoPor: link(celulas[4] ?? '')?.texto ?? null,
+      desde: dataPorExtenso(celulas[5] ?? ''),
+      funcao: cor === '#fcc' || cor === '#ffcccc' ? 'presidente' : cor === '#ffe0c1' ? 'vice-presidente' : null,
+      links: { wikipedia: urlWiki(ministro.alvo) },
+    });
+  }
+  return out;
+}
+
 // ---------- principal ----------
 
 console.log('IBGE...');
@@ -370,6 +401,10 @@ console.log('Ministros (Wikipédia)...');
 const { ministros, atualizadoEm: ministrosAtualizadoEm } = await coletarMinistros();
 console.log('Presidência...');
 const presidencia = await coletarPresidencia();
+console.log('Câmara dos Deputados...');
+const deputados = await coletarDeputados();
+console.log('STF (Wikipédia)...');
+const stf = await coletarStf();
 
 const erros = [];
 if (ufs.length !== 27) erros.push(`UFs: ${ufs.length}, esperado 27`);
@@ -377,12 +412,14 @@ if (malha.features.length !== 27) erros.push(`malha: ${malha.features.length} po
 if (governadores.length !== 27) erros.push(`governadores: ${governadores.length}, esperado 27`);
 if (senadores.length < 75 || senadores.length > 81) erros.push(`senadores: ${senadores.length}, esperado ~81`);
 if (ministros.length < 30) erros.push(`ministros: ${ministros.length}, esperado 30+`);
+if (deputados.length < 500 || deputados.length > 513) erros.push(`deputados: ${deputados.length}, esperado ~513`);
+if (stf.length < 8 || stf.length > 11) erros.push(`STF: ${stf.length} ministros, esperado até 11`);
 if (erros.length) {
   console.error('\nABORTADO — nada foi gravado:\n  ' + erros.join('\n  '));
   process.exit(1);
 }
 
-const pessoas = [...presidencia, ...ministros, ...governadores, ...senadores];
+const pessoas = [...presidencia, ...ministros, ...governadores, ...senadores, ...deputados, ...stf];
 const semEscala = [...new Set(pessoas.map((p) => p.partido).filter((s) => s && !tabelaPartidos.partidos[s]))];
 // Correções à mão (data/manual.json): partido que nenhuma fonte informa.
 const manual = await lerJson('data/manual.json');

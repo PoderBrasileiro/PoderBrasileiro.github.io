@@ -1,6 +1,6 @@
 // Painel lateral: resumo, UF, lista de ministros ou ficha de uma pessoa.
 
-import { h, trocar, CARGOS, textoPartido, ondeAtua, fmtNum, fmtData } from './comum.js';
+import { h, trocar, CARGOS, SITUACOES, destinoDe, selo, textoPartido, ondeAtua, fmtNum, fmtData, semAcento } from './comum.js';
 
 function avatar(p, grande = false) {
   const iniciais = p.nome.split(/\s+/).filter((s) => s.length > 2).slice(0, 2).map((s) => s[0]).join('').toUpperCase();
@@ -21,7 +21,8 @@ function cartao(p, dados, aoEscolherPessoa) {
     h('span', { class: 'cartao-texto' },
       h('b', {}, p.nome),
       h('small', {}, `${CARGOS[p.cargo].curto}${p.interino ? ' (interino)' : ''} · ${textoPartido(p)}`),
-      p.cargo === 'ministro' ? h('small', {}, p.pasta) : null));
+      p.cargo === 'ministro' ? h('small', {}, p.pasta) : null,
+      selo(p, dados)));
 }
 
 // Régua 0–10 com um marcador. `rotulos` são as duas pontas.
@@ -33,6 +34,9 @@ function regua(fracaoDireita, rotulos) {
 
 function blocoEspectro(p, dados) {
   const sec = h('section', {}, h('h3', {}, 'Esquerda × direita'));
+  if (p.cargo === 'stf') {
+    return sec.append(h('p', { class: 'fraco' }, `Ministros do STF não têm filiação partidária, então não há posição a mostrar.${p.indicadoPor ? ` Indicado(a) ao tribunal por ${p.indicadoPor}.` : ''}`)), sec;
+  }
   if (p.partido === undefined) {
     return sec.append(h('p', { class: 'fraco' }, 'A fonte oficial não informa o partido desta pessoa, então não há posição a mostrar. Dá pra preencher à mão em data/manual.json.')), sec;
   }
@@ -54,6 +58,59 @@ function blocoEspectro(p, dados) {
       'É a posição do partido, não uma medida desta pessoa.',
       info.origem === 'estimado' ? ` Valor estimado: ${info.nota}` : ''));
   return sec;
+}
+
+// O que acontece com a pessoa em 2027, segundo o resultado de 2026.
+function blocoDestino(p, dados) {
+  const d = destinoDe(p, dados);
+  if (!d) return null;
+  return h('section', {}, h('h3', {}, '⇄ Em 2027'), selo(p, dados), h('p', {}, d.texto));
+}
+
+const comPartido = (c) => `${c.nome} (${c.partido ?? 'sem partido'})`;
+const duelo = (cands) => cands.map((c) => `${comPartido(c)}${c.pct ? ` ${c.pct}%` : ''}`).join(' × ');
+
+// Quem assume no estado em 2027: governador, senadores e deputados eleitos.
+function blocoChegam(sigla, dados) {
+  const e = dados.eleicao?.porUf?.[sigla];
+  if (!e) return null;
+  const linha = (c) => h('li', {}, h('span', { class: 'prefeito-linha' },
+    h('b', {}, c.nome, c.novo ? h('span', { class: 'selo selo-novo' }, 'novo') : null),
+    h('small', {}, c.partido ?? 'sem partido')));
+  const g = e.governador;
+  const novos = e.deputados.filter((d) => d.novo).length;
+  return h('section', {}, h('h3', {}, '⇄ A partir de 2027'),
+    h('p', {}, h('b', {}, 'Governo: '), g.status === 'eleito'
+      ? `${comPartido(g.eleito)}${g.eleito.novo ? '' : ', reeleito(a)'}${g.eleito.vice ? `; vice ${g.eleito.vice.nome}` : ''}.`
+      : `2º turno em ${dados.eleicao.segundoTurnoEm}: ${duelo(g.candidatos)}.`),
+    h('p', { class: 'rotulo' }, `Senadores eleitos (${e.senadores.length})`),
+    h('ul', { class: 'prefeitos' }, e.senadores.map(linha)),
+    h('p', { class: 'rotulo' }, `Deputados federais eleitos (${e.deputados.length}): ${e.deputados.length - novos} reeleitos, ${novos} novos`),
+    h('ul', { class: 'prefeitos' }, e.deputados.map(linha)));
+}
+
+// Placar da transição pro painel inicial.
+function resumoTransicao(dados) {
+  const e = dados.eleicao;
+  if (!e) return null;
+  const conta = (cargo) => {
+    const c = {};
+    for (const p of dados.pessoas) {
+      if (p.cargo !== cargo) continue;
+      const s = e.destino[p.id]?.situacao;
+      if (s) c[s] = (c[s] ?? 0) + 1;
+    }
+    return Object.keys(SITUACOES).filter((s) => c[s]).map((s) => `${SITUACOES[s].icone} ${c[s]} ${SITUACOES[s].rotulo.toLowerCase()}`).join(' · ');
+  };
+  const emAberto = Object.entries(e.porUf).filter(([, u]) => u.governador.status === 'segundo-turno').map(([uf]) => uf);
+  return h('section', {}, h('h3', {}, '⇄ Transição 2027'),
+    h('p', {}, h('b', {}, 'Presidência: '), e.presidente.status === 'eleito'
+      ? `eleito ${comPartido(e.presidente.eleito)}.`
+      : `2º turno em ${e.segundoTurnoEm}: ${duelo(e.presidente.candidatos)}.`),
+    h('p', {}, h('b', {}, 'Governadores: '), conta('governador'), emAberto.length ? `. 2º turno em ${emAberto.join(', ')}.` : '.'),
+    h('p', {}, h('b', {}, 'Senadores: '), conta('senador'), '.'),
+    h('p', {}, h('b', {}, 'Deputados federais: '), conta('deputado'), '.'),
+    h('p', { class: 'fraco' }, 'Resultado oficial do TSE da eleição de 2026, cruzado com quem está no cargo hoje. As posses são em janeiro (Executivo) e fevereiro (Congresso) de 2027.'));
 }
 
 function blocoVotos(p, dados) {
@@ -116,18 +173,54 @@ function blocoNoticias(p, dados) {
 export function criarPainel(raiz, dados, { aoEscolherPessoa, aoEscolherUf, aoVerMinistros }) {
   const voltar = (rotulo, acao) => h('button', { class: 'voltar', onclick: acao }, `← ${rotulo}`);
 
+  function blocoDeputados(lista) {
+    lista.sort((a, b) => a.nome.localeCompare(b.nome, 'pt'));
+    return h('section', {}, h('h3', {}, `Deputados federais (${lista.length})`),
+      h('ul', { class: 'prefeitos' }, lista.map((p) => h('li', {},
+        h('button', { class: 'prefeito-linha', onclick: () => aoEscolherPessoa(p.id) }, h('b', {}, p.nome), h('small', {}, textoPartido(p)))))));
+  }
+
+  // Lista de prefeitos do estado, com filtro. São centenas por UF, então é
+  // uma linha por município em vez do cartão com foto.
+  function blocoPrefeitos(sigla) {
+    const sec = h('section', {}, h('h3', {}, 'Prefeitos eleitos em 2024'));
+    if (sigla === 'DF') return sec.append(h('p', { class: 'fraco' }, 'O Distrito Federal não tem municípios nem prefeitos.')), sec;
+    if (dados.prefeitos === undefined) return sec.append(h('p', { class: 'fraco' }, 'Carregando…')), sec;
+    const lista = dados.prefeitos?.porUf?.[sigla];
+    if (!lista) return sec.append(h('p', { class: 'fraco' }, 'Dados de prefeitos indisponíveis. Rode "npm run prefeitos".')), sec;
+
+    const campo = h('input', { type: 'search', class: 'filtro', placeholder: `Filtrar ${lista.length} municípios…`, 'aria-label': 'Filtrar municípios' });
+    const ul = h('ul', { class: 'prefeitos' });
+    const desenhar = () => {
+      const t = semAcento(campo.value.trim());
+      const vis = lista.filter((m) => !t || semAcento(`${m.municipio} ${m.nome ?? ''} ${m.partido ?? ''}`).includes(t));
+      trocar(ul, vis.length ? vis.map((m) => h('li', {}, m.pendente
+        ? h('span', { class: 'prefeito-linha fraco' }, h('b', {}, m.municipio), h('small', {}, 'sem eleito no resultado do TSE'))
+        : h('button', { class: 'prefeito-linha', onclick: () => aoEscolherPessoa(`prefeito-${m.ibge}`) },
+          h('b', {}, m.municipio), h('small', {}, `${m.nome} · ${m.partido ?? 'sem partido'}`))))
+        : h('li', { class: 'fraco' }, 'Nenhum município encontrado.'));
+    };
+    campo.addEventListener('input', desenhar);
+    desenhar();
+    sec.append(campo, ul);
+    return sec;
+  }
+
   return {
     resumo() {
       const conta = (c) => dados.pessoas.filter((p) => p.cargo === c).length;
       trocar(raiz, 
         h('h2', {}, 'Comece por aqui'),
-        h('p', {}, 'Clique num estado do mapa pra ver o governador e os senadores, ou numa bolinha da rede de poder pra abrir a ficha de alguém.'),
+        h('p', {}, 'Clique num estado do mapa pra ver governador, senadores, deputados e prefeitos, ou numa bolinha da rede de poder pra abrir a ficha de alguém.'),
         h('ul', { class: 'contagem' },
           h('li', {}, h('b', {}, '2'), ' na Presidência'),
           h('li', {}, h('b', {}, conta('ministro')), ' ministros'),
           h('li', {}, h('b', {}, conta('governador')), ' governadores'),
-          h('li', {}, h('b', {}, conta('senador')), ' senadores')),
-        h('button', { class: 'botao', onclick: aoVerMinistros }, 'Ver os ministros'));
+          h('li', {}, h('b', {}, conta('senador')), ' senadores'),
+          h('li', {}, h('b', {}, conta('deputado')), ' deputados federais'),
+          h('li', {}, h('b', {}, conta('stf')), ' ministros do STF')),
+        h('button', { class: 'botao', onclick: aoVerMinistros }, 'Ver os ministros'),
+        resumoTransicao(dados));
     },
 
     uf(sigla) {
@@ -141,7 +234,10 @@ export function criarPainel(raiz, dados, { aoEscolherPessoa, aoEscolherUf, aoVer
         h('h3', {}, 'Governo do estado'),
         gov.length ? gov.map((p) => cartao(p, dados, aoEscolherPessoa)) : h('p', { class: 'fraco' }, 'Não encontrado.'),
         h('h3', {}, `Senadores (${sen.length})`),
-        sen.map((p) => cartao(p, dados, aoEscolherPessoa)));
+        sen.map((p) => cartao(p, dados, aoEscolherPessoa)),
+        blocoChegam(sigla, dados),
+        blocoDeputados(gente.filter((p) => p.cargo === 'deputado')),
+        blocoPrefeitos(sigla));
     },
 
     ministros() {
@@ -169,10 +265,15 @@ export function criarPainel(raiz, dados, { aoEscolherPessoa, aoEscolherUf, aoVer
         h('div', { class: 'ficha-topo' },
           avatar(p, true),
           h('div', {},
-            h('p', { class: 'sobretitulo' }, `${CARGOS[p.cargo].rotulo}${p.interino ? ' — interino' : ''}`),
+            h('p', { class: 'sobretitulo' }, `${CARGOS[p.cargo].rotulo}${p.interino ? ' — interino' : ''}${p.funcao ? ` — ${p.funcao}` : ''}`),
             h('h2', {}, p.nome),
             h('p', {}, [ondeAtua(p, dados), textoPartido(p)].join(' · ')),
-            desde ? h('p', { class: 'fraco' }, `No cargo desde ${desde}`) : null)),
+            desde ? h('p', { class: 'fraco' }, `No cargo desde ${desde}`) : null,
+            p.vice ? h('p', { class: 'fraco' }, `Vice: ${p.vice.nome} · ${p.vice.partido ?? 'sem partido'}`) : null)),
+        p.cargo === 'prefeito' ? h('p', { class: 'aviso' },
+          h('b', {}, 'Resultado da eleição de 2024. '),
+          'É quem o TSE registra como eleito, e o partido pelo qual concorreu. Pode não ser quem está no cargo hoje (cassação, renúncia, eleição suplementar) nem o partido atual.') : null,
+        blocoDestino(p, dados),
         blocoEspectro(p, dados),
         blocoVotos(p, dados),
         blocoNoticias(p, dados),

@@ -8,13 +8,14 @@ const carregar = (nome) => fetch(`${base}data/${nome}`).then((r) => (r.ok ? r.js
 
 let dados;
 try {
-  const [brasil, malha, noticias] = await Promise.all([
+  const [brasil, malha, noticias, eleicao] = await Promise.all([
     carregar('brasil.json'),
     carregar('malha.json'),
     carregar('noticias.json').catch(() => null),   // opcional: o site funciona sem
+    carregar('eleicao2026.json').catch(() => null),
   ]);
   dados = {
-    ...brasil, malha, noticias,
+    ...brasil, malha, noticias, eleicao,
     pessoaPorId: new Map(brasil.pessoas.map((p) => [p.id, p])),
     ufPorSigla: new Map(brasil.ufs.map((u) => [u.sigla, u])),
     governadorPorUf: new Map(brasil.pessoas.filter((p) => p.cargo === 'governador').map((p) => [p.uf, p])),
@@ -31,13 +32,17 @@ const acoes = {
   aoEscolherPessoa: (id) => selecionar({ pessoa: id, uf: dados.pessoaPorId.get(id).uf ?? null }),
   aoEscolherUf: (uf) => selecionar({ uf }),
   aoVerMinistros: () => selecionar({ ministros: true }),
+  aoVerMapa: () => abrirAba('mapa'),
+  carregarMalhaUf: (uf) => carregar(`malhas/${uf}.json`),
 };
 
 const mapa = criarMapa(document.getElementById('vis-mapa'), dados, acoes);
 const rede = criarRede(document.getElementById('vis-rede'), dados, acoes);
 const painel = criarPainel(document.getElementById('painel'), dados, acoes);
 
+let selecaoAtual = {};
 function selecionar(sel) {
+  selecaoAtual = sel;
   mapa.selecionar(sel);
   rede.selecionar(sel);
   if (sel.pessoa) painel.pessoa(sel.pessoa);
@@ -67,24 +72,22 @@ function desenharLegenda() {
       h('span', {}, 'esquerda'), h('span', { class: 'legenda-rampa' }), h('span', {}, 'direita')),
     h('div', { class: 'legenda-item' }, h('span', { class: 'legenda-hachura' }), h('span', {}, 'sem partido ou não informado')),
     aba === 'mapa'
-      ? h('div', { class: 'legenda-item fraco' }, 'Cor do estado = posição do partido do governador')
-      : h('div', { class: 'legenda-item' },
-        ['presidente', 'governador', 'ministro', 'senador'].map((c) =>
-          h('span', { class: 'legenda-tam' },
-            h('i', { style: `width:${CARGOS[c].raio * 2}px;height:${CARGOS[c].raio * 2}px` }), CARGOS[c].curto))));
+      ? h('div', { class: 'legenda-item fraco' }, 'Cor = partido do governador (estados) ou do prefeito eleito em 2024 (municípios)')
+      : h('div', { class: 'legenda-item fraco' }, 'Cada bolinha é uma pessoa. Em cada grupo, ordenadas da esquerda para a direita. Cinza liso = cargo sem partido (STF).'));
 }
 
 // ---------- lista (a visão em tabela dos mesmos dados) ----------
 
 function criarLista(raiz) {
-  const ordem = { presidente: 0, vice: 1, ministro: 2, governador: 3, senador: 4 };
+  const ordem = Object.fromEntries(['presidente', 'vice', 'ministro', 'stf', 'governador', 'senador', 'deputado', 'prefeito'].map((c, i) => [c, i]));
   const filtro = h('select', { 'aria-label': 'Filtrar por cargo' },
     h('option', { value: '' }, 'Todos os cargos'),
     Object.entries(CARGOS).map(([k, c]) => h('option', { value: k }, c.curto)));
   const corpo = h('tbody');
   const desenhar = () => {
     const linhas = dados.pessoas
-      .filter((p) => !filtro.value || p.cargo === filtro.value)
+      // Os ~5.500 prefeitos só entram quando pedidos; em "todos" afogariam o resto.
+      .filter((p) => (filtro.value ? p.cargo === filtro.value : p.cargo !== 'prefeito'))
       .sort((a, b) => ordem[a.cargo] - ordem[b.cargo] || ondeAtua(a, dados).localeCompare(ondeAtua(b, dados), 'pt') || a.nome.localeCompare(b.nome, 'pt'));
     corpo.replaceChildren(...linhas.map((p) => {
       const pos = posicaoDe(p, dados);
@@ -100,8 +103,9 @@ function criarLista(raiz) {
       h('thead', {}, h('tr', {}, ['Nome', 'Cargo', 'UF / pasta', 'Partido', 'Posição do partido (0–10)'].map((t) => h('th', {}, t)))),
       corpo)));
   desenhar();
+  return desenhar;
 }
-criarLista(document.getElementById('vis-lista'));
+const redesenharLista = criarLista(document.getElementById('vis-lista'));
 
 // ---------- abas ----------
 
@@ -117,9 +121,10 @@ for (const b of document.querySelectorAll('.abas button')) b.addEventListener('c
 
 const campo = document.getElementById('busca');
 const resultados = document.getElementById('busca-resultados');
-const indice = dados.pessoas.map((p) => ({
-  p, texto: semAcento([p.nome, p.nomeCompleto, p.partido, p.pasta, p.uf, dados.ufPorSigla.get(p.uf)?.nome, CARGOS[p.cargo].curto].filter(Boolean).join(' ')),
-}));
+const indexar = (p) => ({
+  p, texto: semAcento([p.nome, p.nomeCompleto, p.partido, p.pasta, p.municipio, p.uf, dados.ufPorSigla.get(p.uf)?.nome, CARGOS[p.cargo].curto].filter(Boolean).join(' ')),
+});
+const indice = dados.pessoas.map(indexar);
 campo.addEventListener('input', () => {
   const termos = semAcento(campo.value).split(/\s+/).filter(Boolean);
   const achados = termos.length ? indice.filter((x) => termos.every((t) => x.texto.includes(t))).slice(0, 8) : [];
@@ -145,6 +150,8 @@ document.getElementById('metodologia').append(
     h('li', {}, 'Senadores e votações: ', link('Dados Abertos do Senado Federal', 'https://legis.senado.leg.br/dadosabertos/'), '.'),
     h('li', {}, 'Ministros: ', link('página oficial do Planalto', 'https://www.gov.br/planalto/pt-br/conheca-a-presidencia/ministros-e-ministras'), '. Partido e foto, quando aparecem, vêm da Wikipédia.'),
     h('li', {}, 'Governadores: ', link('Wikipédia em português', 'https://pt.wikipedia.org/wiki/Lista_de_governadores_das_unidades_federativas_do_Brasil'), ' — não existe fonte oficial única; confira no site do governo estadual em caso de dúvida.'),
+    h('li', {}, 'Prefeitos: ', link('resultado oficial do TSE', 'https://resultados.tse.jus.br/'), ' da eleição de 2024. É quem foi eleito, não necessariamente quem está no cargo hoje.'),
+    h('li', {}, 'Transição 2027 (⇄): ', link('resultado oficial do TSE', 'https://resultados.tse.jus.br/'), ' da eleição de 2026, cruzado pelo nome com quem está no cargo hoje. Nomes escritos de forma diferente nas duas fontes podem não casar, e aí a pessoa aparece como "sai" por engano.'),
     h('li', {}, 'Mapa e lista de estados: ', link('IBGE', 'https://servicodados.ibge.gov.br/api/docs/'), '.')),
   h('h4', {}, 'Esquerda × direita'),
   h('p', {}, 'Não existe medida oficial. O site mostra duas coisas separadas e diz qual é qual:'),
@@ -158,6 +165,30 @@ document.getElementById('atualizado').textContent =
   `Dados coletados em ${fmtData(dados.geradoEm)}. Projeto pessoal, sem vínculo com governo ou partido.`;
 
 // ---------- início ----------
+
+// ---------- prefeitos (arquivo grande, carregado depois que a tela já abriu) ----------
+
+carregar('prefeitos.json').then((prefeitos) => {
+  dados.prefeitos = prefeitos;
+  dados.nomeMunicipio = new Map();
+  for (const [uf, lista] of Object.entries(prefeitos.porUf)) {
+    for (const m of lista) {
+      dados.nomeMunicipio.set(m.ibge, m.municipio);
+      if (m.pendente) continue;
+      const p = { ...m, id: `prefeito-${m.ibge}`, cargo: 'prefeito', uf };
+      dados.pessoas.push(p);
+      dados.pessoaPorId.set(p.id, p);
+      indice.push(indexar(p));
+    }
+  }
+}).catch(() => {
+  dados.prefeitos = null;   // sem o arquivo o resto do site segue funcionando
+}).finally(() => {
+  pintar();
+  redesenharLista();
+  rede.atualizarPrefeitos();
+  if (selecaoAtual.uf && !selecaoAtual.pessoa) painel.uf(selecaoAtual.uf);
+});
 
 pintar();
 painel.resumo();

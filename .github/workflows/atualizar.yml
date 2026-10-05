@@ -33,6 +33,8 @@ jobs:
       # que já estavam no repositório.
       - run: npm run coletar
         continue-on-error: true
+      - run: npm run eleicao
+        continue-on-error: true
       - run: npm run noticias
         if: github.event_name != 'push'
         continue-on-error: true

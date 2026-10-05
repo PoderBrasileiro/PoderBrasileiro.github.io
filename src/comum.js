@@ -8,6 +8,9 @@ export const CARGOS = {
   ministro: { rotulo: 'Ministro(a) de Estado', curto: 'Ministro(a)', raio: 5.5 },
   governador: { rotulo: 'Governador(a)', curto: 'Governador(a)', raio: 7.5 },
   senador: { rotulo: 'Senador(a)', curto: 'Senador(a)', raio: 5 },
+  deputado: { rotulo: 'Deputado(a) federal', curto: 'Deputado(a) federal', raio: 4 },
+  stf: { rotulo: 'Ministro(a) do Supremo Tribunal Federal', curto: 'Ministro(a) do STF', raio: 7 },
+  prefeito: { rotulo: 'Prefeito(a) eleito(a) em 2024', curto: 'Prefeito(a)', raio: 4 },
 };
 
 // Cria elemento sem innerHTML: título de notícia e nome vêm de fonte externa.
@@ -50,12 +53,15 @@ export function corDe(pessoa, dados, escala) {
 }
 
 export function textoPartido(pessoa) {
+  if (pessoa.cargo === 'stf') return 'sem partido (magistrado)';
   if (pessoa.partido === undefined) return 'partido não informado';
   return pessoa.partido ?? 'sem partido';
 }
 
 export function ondeAtua(pessoa, dados) {
   if (pessoa.cargo === 'ministro') return pessoa.pasta;
+  if (pessoa.cargo === 'stf') return 'Supremo Tribunal Federal';
+  if (pessoa.cargo === 'prefeito') return `${pessoa.municipio} (${pessoa.uf})`;
   if (pessoa.uf) return dados.ufPorSigla.get(pessoa.uf)?.nome ?? pessoa.uf;
   return 'Brasil';
 }
@@ -101,4 +107,24 @@ export function esconderDica() { dica().hidden = true; }
 // transformaria os dois em texto ("[object HTMLButtonElement]", "null").
 export function trocar(el, ...filhos) {
   el.replaceChildren(...filhos.flat(Infinity).filter((f) => f != null && f !== false));
+}
+
+// ---------- transição 2027 (resultado da eleição de 2026) ----------
+
+export const SITUACOES = {
+  fica: { icone: '↻', rotulo: 'Fica em 2027' },
+  sai: { icone: '→', rotulo: 'Sai em 2027' },
+  muda: { icone: '⇄', rotulo: 'Muda de cargo' },
+  'segundo-turno': { icone: '②', rotulo: 'No 2º turno' },
+  depende: { icone: '?', rotulo: 'Em aberto' },
+};
+
+export const destinoDe = (pessoa, dados) => dados.eleicao?.destino?.[pessoa.id] ?? null;
+
+// Etiqueta curta com o ícone da situação; null pra quem não tem (STF, prefeitos).
+export function selo(pessoa, dados) {
+  const d = destinoDe(pessoa, dados);
+  if (!d) return null;
+  const s = SITUACOES[d.situacao];
+  return h('span', { class: `selo selo-${d.situacao}`, title: d.texto }, h('i', { 'aria-hidden': 'true' }, s.icone), s.rotulo);
 }

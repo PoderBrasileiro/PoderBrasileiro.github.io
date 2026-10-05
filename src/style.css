@@ -223,3 +223,63 @@ tbody tr:hover { background: var(--fundo-2); }
   .abas { margin-left: 0; }
   .topo { padding: 12px 16px; }
 }
+
+/* ---------- prefeitos e mapa municipal ---------- */
+.filtro { width: 100%; padding: 7px 10px; background: var(--fundo-2); border: 1px solid var(--borda); border-radius: 8px; }
+.prefeitos { max-height: 340px; overflow-y: auto; border: 1px solid var(--borda); border-radius: 10px; }
+.prefeitos li + li { border-top: 1px solid var(--borda); }
+.prefeitos li.fraco { padding: 8px 10px; }
+.prefeito-linha { display: flex; flex-direction: column; width: 100%; padding: 6px 10px; background: none; border: 0; text-align: left; line-height: 1.3; }
+button.prefeito-linha:hover { background: var(--fundo-2); }
+.prefeito-linha small { color: var(--texto-2); }
+.municipio { stroke: var(--fundo); stroke-width: 0.5; stroke-linejoin: round; cursor: pointer; }
+.municipio:hover { opacity: 0.75; }
+.municipio.ativa { stroke: var(--destaque); stroke-width: 2.5; }
+.federal-item.voltar-brasil { font-weight: 600; }
+.federal-item[hidden] { display: none; }
+
+/* ---------- rede de poder (quadro dos três poderes) ---------- */
+#vis-rede { overflow: auto; }
+.quadro { display: flex; flex-direction: column; gap: 10px; min-width: 760px; }
+.q-raiz { align-self: center; padding: 6px 18px; border: 1px solid var(--borda); border-radius: 999px; font-weight: 700; letter-spacing: -0.01em; }
+.q-grade { display: grid; grid-template-columns: 92px repeat(3, minmax(0, 1fr)); gap: 8px; }
+.q-poder { padding: 8px 12px; border-bottom: 3px solid var(--texto); display: flex; flex-direction: column; line-height: 1.25; }
+.q-poder b { font-size: 16px; }
+.q-poder small, .q-nivel small { color: var(--texto-2); font-size: 12px; }
+.q-nivel { padding: 10px 8px 10px 0; display: flex; flex-direction: column; line-height: 1.25; border-top: 1px solid var(--borda); }
+.q-celula { padding: 10px 12px; background: var(--fundo-2); border-radius: 10px; display: flex; flex-direction: column; gap: 12px; }
+.q-grupo { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+.q-grupo h4 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--texto-2); }
+.q-nota { font-size: 12px; color: var(--texto-2); }
+.q-fora { opacity: 0.75; }
+.q-nuvem { display: flex; flex-wrap: wrap; gap: 3px; }
+.q-destaques { display: flex; flex-wrap: wrap; gap: 8px 14px; }
+.q-gov { gap: 6px 4px; }
+.q-gov .b-nome { flex-direction: column; gap: 2px; width: 30px; font-size: 11px; }
+.q-stf .b-nome { flex-basis: 100%; }
+.b-nome { display: flex; align-items: center; gap: 6px; font-size: 13px; line-height: 1.2; }
+.b { flex: none; padding: 0; border: 2px solid var(--fundo-2); border-radius: 50%; background: var(--texto-3); box-sizing: content-box; transition: opacity 0.12s; }
+.b.sem { background: repeating-linear-gradient(45deg, var(--texto-3) 0 2px, var(--fundo) 2px 5px); }
+.b:hover, .b.ativo { border-color: var(--destaque); }
+.b.ativo { outline: 2px solid var(--destaque); outline-offset: 1px; }
+.b.apagada { opacity: 0.18; }
+
+/* ---------- transição 2027 ---------- */
+.selo { display: inline-flex; align-items: center; gap: 4px; align-self: flex-start; padding: 1px 8px; border: 1px solid var(--borda); border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+.selo i { font-style: normal; }
+.selo-sai { border-style: dashed; color: var(--texto-2); }
+.selo-muda, .selo-segundo-turno { border-color: var(--aviso-borda); background: var(--aviso-fundo); }
+.selo-novo { margin-left: 6px; font-weight: 500; }
+.q-topo { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px; }
+.q-topo .q-raiz { align-self: auto; }
+.q-chave { padding: 6px 14px; border: 1px solid var(--borda); border-radius: 999px; background: none; font-weight: 600; }
+.q-chave[aria-pressed="true"] { background: var(--destaque); color: var(--fundo); border-color: var(--destaque); }
+.q-legenda { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 16px; font-size: 12px; color: var(--texto-2); }
+.q-legenda[hidden] { display: none; }
+.q-legenda span { display: inline-flex; align-items: center; gap: 6px; }
+.q-legenda .b { width: 12px; height: 12px; }
+/* A cor continua sendo o partido; a situação vai no contorno e na opacidade. */
+.transicao .b[data-sit="sai"], .q-legenda .b[data-sit="sai"] { opacity: 0.28; }
+.transicao .b[data-sit="depende"], .q-legenda .b[data-sit="depende"] { opacity: 0.55; border-style: dotted; border-color: var(--texto-2); }
+.transicao .b[data-sit="muda"], .q-legenda .b[data-sit="muda"] { border-style: dashed; border-color: var(--destaque); }
+.transicao .b[data-sit="segundo-turno"], .q-legenda .b[data-sit="segundo-turno"] { border-color: var(--aviso-borda); box-shadow: 0 0 0 2px var(--aviso-borda); }
