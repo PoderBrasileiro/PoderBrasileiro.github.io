@@ -59,7 +59,7 @@ const capitalizar = (s) => s.toLocaleLowerCase('pt-BR').split(/\s+/).filter(Bool
 async function disputa(eleicao, abr, cargo) {
   const arq = (e) => `${BASE}/${e}/dados/${abr}/${abr}-c${CARGO[cargo]}-e${e.padStart(6, '0')}-u.json`;
   const ler = (j) => j.carg[0].agr.flatMap((a) => a.par.flatMap((p) => p.cand.map((c) => ({
-    cargo, uf: abr.toUpperCase(),
+    cargo, uf: abr.toUpperCase(), sqcand: c.sqcand,
     nome: capitalizar(c.nmu), nomeCompleto: capitalizar(c.nm),
     chaveUrna: norm(c.nmu), chaveCompleta: norm(c.nm),
     partido: normalizarPartido(p.sg),
@@ -206,6 +206,10 @@ const chavesHoje = (cargo) => new Set(brasil.pessoas.filter((p) => p.cargo === c
 const jaSenador = chavesHoje('senador');
 const jaDeputado = chavesHoje('deputado');
 const jaGovernador = chavesHoje('governador');
+// Quem foi casado com ALGUÉM que está em cargo hoje, em qualquer cargo. Serve
+// pra separar o estreante (que o site ainda não conhece) do reeleito e de quem
+// trocou de cargo — esses dois já têm ficha, com o destino em 2027 escrito nela.
+const jaEmCargo = new Set(brasil.pessoas.flatMap((p) => candidaturasDe(p).map((c) => c.chaveCompleta)));
 
 const porUf = {};
 for (const u of brasil.ufs) {
@@ -221,9 +225,23 @@ for (const u of brasil.ufs) {
   };
 }
 
+// Os estreantes: eleitos em 2026 que não ocupam cargo nenhum hoje. Sem isto
+// eles não existem no site até a posse, e buscar pelo nome não acha nada.
+const estreantes = todos
+  .filter((c) => c.eleito && c.cargo !== 'presidente' && !jaEmCargo.has(c.chaveCompleta))
+  .map((c) => ({
+    id: `eleito-${c.sqcand}`,
+    cargoEleito: c.cargo,
+    nome: c.nome, nomeCompleto: c.nomeCompleto,
+    uf: c.uf, partido: c.partido, pct: c.pct,
+    ...(c.vice ? { vice: { nome: c.vice.nome, partido: c.vice.partido } } : {}),
+  }))
+  .sort((a, b) => a.nome.localeCompare(b.nome, 'pt'));
+
 const saida = {
   geradoEm: new Date().toISOString(),
   segundoTurnoEm: DATA_2T,
+  estreantes,
   presidente: presidenteEleito ? { status: 'eleito', eleito: publico(presidenteEleito) } : { status: 'segundo-turno', candidatos: finalistas.map(publico) },
   porUf, destino,
 };

@@ -354,3 +354,55 @@ span.votante { color: var(--texto-2); border-style: dashed; }
 .tema { display: flex; gap: 2px; padding: 3px; background: var(--fundo-2); border-radius: 10px; }
 .tema button { width: 30px; height: 28px; padding: 0; border: 0; border-radius: 8px; background: none; color: var(--texto-2); font-size: 14px; line-height: 1; }
 .tema button[aria-pressed="true"] { background: var(--fundo); color: var(--texto); box-shadow: 0 1px 2px rgb(0 0 0 / 0.15); }
+
+/* ---------- árvore do Executivo ---------- */
+.q-arvore { display: flex; flex-direction: column; gap: 0; }
+.q-no-raiz { display: flex; justify-content: center; padding-bottom: 14px; position: relative; }
+.q-no-raiz::after { content: ''; position: absolute; left: 50%; bottom: 0; width: 1px; height: 14px; background: var(--borda); }
+.q-ramo { display: flex; flex-direction: column; gap: 14px; padding-top: 14px; border-top: 1px solid var(--borda); position: relative; }
+.q-ramo > .q-no { position: relative; padding-left: 16px; }
+.q-ramo > .q-no::before { content: ''; position: absolute; left: 0; top: -14px; width: 1px; height: calc(14px + 1.1em); background: var(--borda); }
+.q-ramo > .q-no::after { content: ''; position: absolute; left: 0; top: 1.1em; width: 14px; height: 1px; background: var(--borda); }
+.q-retrato {
+  position: absolute; inset: -1px; border-radius: 50%; overflow: hidden;
+  display: grid; place-items: center; background: var(--fundo-2);
+  font-size: 10px; font-weight: 700; color: var(--texto-2);
+}
+.q-retrato i { font-style: normal; }
+.q-retrato img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center 18%; }
+.b-foto { position: relative; width: 34px !important; height: 34px !important; border-width: 3px; }
+.b-nome-foto { gap: 9px; }
+.q-stf .b-nome-foto { flex-basis: 100%; }
+
+/* ---------- balanço esquerda/direita ---------- */
+.q-balanco { width: 100%; display: flex; flex-direction: column; gap: 4px; }
+.q-barra { display: flex; height: 8px; border-radius: 4px; overflow: hidden; background: var(--borda); gap: 1px; }
+.q-barra span { height: 100%; }
+.q-barra-esq { background: var(--esq); }
+.q-barra-meio { background: var(--meio); }
+.q-barra-dir { background: var(--dir); }
+
+/* ---------- etapas da PEC ---------- */
+.selo-etapa[data-etapa="promulgada"] { border-color: #0ca30c; color: #0a7a0a; }
+.selo-etapa[data-etapa="outra-casa"] { border-color: var(--dir); }
+.selo-etapa[data-etapa="plenario"] { border-color: var(--aviso-borda); background: var(--aviso-fundo); }
+.selo-etapa[data-etapa="comissao"] { color: var(--texto-2); border-style: dashed; }
+:root[data-theme="escuro"] .selo-etapa[data-etapa="promulgada"],
+:root:not([data-theme="claro"]) .selo-etapa[data-etapa="promulgada"] { color: #4cc94c; }
+.trilha { display: flex; gap: 3px; width: 100%; }
+.trilha-passo { flex: 1; height: 4px; border-radius: 2px; background: var(--borda); }
+.trilha-passo.feito { background: var(--texto-3); }
+.trilha-passo.agora[data-etapa="promulgada"] { background: #0ca30c; }
+.trilha-passo.agora[data-etapa="outra-casa"] { background: var(--dir); }
+.trilha-passo.agora[data-etapa="plenario"] { background: var(--aviso-borda); }
+.trilha-passo.agora[data-etapa="comissao"] { background: var(--texto-2); }
+.pecs-legenda { display: flex; flex-wrap: wrap; gap: 6px; }
+.pec-etapa { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+
+/* ---------- contagem regressiva ---------- */
+.contagem { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 18px; padding: 8px 12px; background: var(--fundo-2); border-radius: 10px; }
+.contagem-dia { font-weight: 700; }
+.contagem-item { display: flex; flex-direction: column; line-height: 1.25; }
+.contagem-item small { color: var(--texto-2); font-size: 12px; }
+.contagem-item b { font-variant-numeric: tabular-nums; }
+.q-barra-fora { background: repeating-linear-gradient(45deg, var(--texto-3) 0 2px, var(--fundo-2) 2px 5px); }

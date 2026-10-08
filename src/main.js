@@ -1,8 +1,9 @@
-import { h, CARGOS, escalaEspectro, posicaoDe, textoPartido, ondeAtua, fmtNum, fmtData, semAcento } from './comum.js';
+import { h, CARGOS, CARGO_ELEITO, escalaEspectro, posicaoDe, textoPartido, ondeAtua, fmtNum, fmtData, semAcento } from './comum.js';
 import { criarMapa } from './mapa.js';
 import { criarRede } from './rede.js';
 import { criarPainel } from './painel.js';
 import { criarPecs } from './pecs.js';
+import { criarContagem } from './contagem.js';
 
 const base = import.meta.env.BASE_URL;
 const carregar = (nome) => fetch(`${base}data/${nome}`).then((r) => (r.ok ? r.json() : Promise.reject(new Error(`${nome}: HTTP ${r.status}`))));
@@ -21,6 +22,13 @@ try {
     ufPorSigla: new Map(brasil.ufs.map((u) => [u.sigla, u])),
     governadorPorUf: new Map(brasil.pessoas.filter((p) => p.cargo === 'governador').map((p) => [p.uf, p])),
   };
+  // Eleitos que ainda não assumiram entram como gente de verdade: busca, lista
+  // e página própria. Sem isso, procurar por um estreante não acha nada.
+  for (const e of eleicao?.estreantes ?? []) {
+    const p = { ...e, cargo: 'eleito' };
+    dados.pessoas.push(p);
+    dados.pessoaPorId.set(p.id, p);
+  }
 } catch (e) {
   document.querySelector('.palco').replaceChildren(
     h('p', { class: 'erro' }, 'Não deu pra carregar os dados. Rode "npm run coletar" e recarregue. ', h('code', {}, e.message)));
@@ -41,6 +49,7 @@ const acoes = {
 const mapa = criarMapa(document.getElementById('vis-mapa'), dados, acoes);
 const rede = criarRede(document.getElementById('vis-rede'), dados, acoes);
 const painel = criarPainel(document.getElementById('painel'), dados, acoes);
+criarContagem(document.getElementById('contagem'), dados);
 const abaPecs = criarPecs(document.getElementById('vis-pecs'), dados, acoes);
 
 let selecaoAtual = {};
@@ -96,7 +105,7 @@ function desenharLegenda() {
 // ---------- lista (a visão em tabela dos mesmos dados) ----------
 
 function criarLista(raiz) {
-  const ordem = Object.fromEntries(['presidente', 'vice', 'ministro', 'stf', 'governador', 'senador', 'deputado', 'prefeito'].map((c, i) => [c, i]));
+  const ordem = Object.fromEntries(['presidente', 'vice', 'ministro', 'stf', 'governador', 'senador', 'deputado', 'eleito', 'prefeito'].map((c, i) => [c, i]));
   const filtro = h('select', { 'aria-label': 'Filtrar por cargo' },
     h('option', { value: '' }, 'Todos os cargos'),
     Object.entries(CARGOS).map(([k, c]) => h('option', { value: k }, c.curto)));
@@ -139,7 +148,7 @@ for (const b of document.querySelectorAll('.abas button')) b.addEventListener('c
 const campo = document.getElementById('busca');
 const resultados = document.getElementById('busca-resultados');
 const indexar = (p) => ({
-  p, texto: semAcento([p.nome, p.nomeCompleto, p.partido, p.pasta, p.municipio, p.uf, dados.ufPorSigla.get(p.uf)?.nome, CARGOS[p.cargo].curto].filter(Boolean).join(' ')),
+  p, texto: semAcento([p.nome, p.nomeCompleto, p.partido, p.pasta, p.municipio, p.cargoEleito && CARGO_ELEITO[p.cargoEleito], p.uf, dados.ufPorSigla.get(p.uf)?.nome, CARGOS[p.cargo].curto].filter(Boolean).join(' ')),
 });
 const indice = dados.pessoas.map(indexar);
 campo.addEventListener('input', () => {
@@ -168,6 +177,7 @@ document.getElementById('metodologia').append(
     h('li', {}, 'Ministros: ', link('página oficial do Planalto', 'https://www.gov.br/planalto/pt-br/conheca-a-presidencia/ministros-e-ministras'), '. Partido e foto, quando aparecem, vêm da Wikipédia.'),
     h('li', {}, 'Governadores: ', link('Wikipédia em português', 'https://pt.wikipedia.org/wiki/Lista_de_governadores_das_unidades_federativas_do_Brasil'), ' — não existe fonte oficial única; confira no site do governo estadual em caso de dúvida.'),
     h('li', {}, 'Prefeitos: ', link('resultado oficial do TSE', 'https://resultados.tse.jus.br/'), ' da eleição de 2024. É quem foi eleito, não necessariamente quem está no cargo hoje.'),
+    h('li', {}, 'Eleitos em 2026 que ainda não assumiram aparecem na busca e na lista como “Eleito(a) em 2026”, com aviso na ficha. A posse é em janeiro (governadores) e fevereiro (Congresso) de 2027.'),
     h('li', {}, 'Transição 2027 (⇄): ', link('resultado oficial do TSE', 'https://resultados.tse.jus.br/'), ' da eleição de 2026, cruzado pelo nome com quem está no cargo hoje. Nomes escritos de forma diferente nas duas fontes podem não casar, e aí a pessoa aparece como "sai" por engano.'),
     h('li', {}, 'PECs: ', link('Dados Abertos da Câmara', 'https://dadosabertos.camara.leg.br/'), ' e do Senado. Só votações nominais de plenário; as simbólicas não registram voto individual.'),
     h('li', {}, 'Mapa e lista de estados: ', link('IBGE', 'https://servicodados.ibge.gov.br/api/docs/'), '.')),
@@ -176,6 +186,8 @@ document.getElementById('metodologia').append(
   h('ul', {},
     h('li', {}, h('b', {}, 'Posição do partido: '), dados.fontePartidos, ' A porcentagem é só essa nota convertida (nota 7 = 70% direita). Vale para o partido inteiro, não para a pessoa. Nas cores, o vermelho e o azul cheios aparecem a partir de 2 e de 8: no intervalo todo, como nenhum partido com gente em cargo chega perto das pontas, tudo sairia cinzento.'),
     h('li', {}, h('b', {}, 'Voto no plenário (só senadores): '), `nas votações nominais em que a maioria do ${dados.votos.poloEsquerda} e a maioria do ${dados.votos.poloDireita} ficaram em lados opostos, de que lado o senador votou. Mede alinhamento de voto, não ideologia.`)),
+  h('h4', {}, 'Porcentagem de esquerda e direita'),
+  h('p', {}, 'Em cada grupo, conta quantas pessoas são de partido com nota abaixo de 5 (esquerda), acima de 5 (direita) ou exatamente no meio. A porcentagem é sobre quem tem partido conhecido, e a parte hachurada da barra mostra de quanta gente não se sabe — nos ministros isso é a maioria. É contagem de cabeças pela posição do partido, não medida de força política: um partido grande e um pequeno pesam igual.'),
   h('h4', {}, 'Investigações e notícias'),
   h('p', {}, 'O site não afirma nada sobre ninguém: só reúne links. As listas são geradas por busca automática pelo nome, sem revisão humana, e erram — homônimos e simples citações aparecem. Investigado, réu e condenado são situações jurídicas diferentes, e só a fonte original diz qual é o caso.'));
 

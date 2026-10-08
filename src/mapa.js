@@ -83,17 +83,36 @@ export function criarMapa(raiz, dados, { aoEscolherUf, aoEscolherPessoa, aoVerMi
     municipios.filter((f) => f.properties.codarea === municipioAtivo).raise();
   }
 
+  // Movimento da troca de nível: o Brasil se aproxima do estado escolhido e
+  // some; o estado entra vindo de um pouco maior. Dá a sensação de descer um
+  // degrau em vez de duas imagens trocadas de lugar.
+  const RAPIDO = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const dur = (ms) => (RAPIDO ? 0 : ms);
+
+  function aproximar(uf) {
+    const f = dados.malha.features.find((x) => x.properties.sigla === uf);
+    if (!f) return;
+    const [[x0, y0], [x1, y1]] = caminho.bounds(f);
+    const k = Math.min(6, 0.8 / Math.max((x1 - x0) / L, (y1 - y0) / A));
+    gBrasil.transition().duration(dur(420)).ease(d3.easeCubicInOut)
+      .attr('transform', `translate(${L / 2},${A / 2}) scale(${k}) translate(${-(x0 + x1) / 2},${-(y0 + y1) / 2})`)
+      .style('opacity', 0);
+  }
+
   function mostrarBrasil() {
     ufAberta = null;
     gUf.style('display', 'none').selectAll('*').remove();
     municipios = null;
-    gBrasil.style('display', null);
+    gBrasil.style('display', null).interrupt()
+      .transition().duration(dur(360)).ease(d3.easeCubicOut)
+      .attr('transform', null).style('opacity', 1);
     voltar.hidden = true;
   }
 
   async function abrirUf(uf) {
     ufPedida = uf;
     if (ufAberta === uf) return pintarMunicipios();
+    if (!ufAberta) aproximar(uf);
     if (!malhas.has(uf)) malhas.set(uf, carregarMalhaUf(uf).then((m) => (corrigirSentido(m), m)));
     let malha;
     try { malha = await malhas.get(uf); } catch { malhas.delete(uf); return; }   // sem malha: fica o mapa do Brasil
@@ -111,7 +130,10 @@ export function criarMapa(raiz, dados, { aoEscolherUf, aoEscolherPessoa, aoVerMi
       .on('click', (ev, f) => { const p = prefeitoDe(f); if (p) aoEscolherPessoa(p.id); });
     ufAberta = uf;
     gBrasil.style('display', 'none');
-    gUf.style('display', null);
+    gUf.style('display', null)
+      .attr('transform', `translate(${L / 2},${A / 2}) scale(1.35) translate(${-L / 2},${-A / 2})`).style('opacity', 0)
+      .transition().duration(dur(380)).ease(d3.easeCubicOut)
+      .attr('transform', null).style('opacity', 1);
     voltar.hidden = false;
     pintarMunicipios();
   }

@@ -10,6 +10,7 @@ export const CARGOS = {
   senador: { rotulo: 'Senador(a)', curto: 'Senador(a)', raio: 5 },
   deputado: { rotulo: 'Deputado(a) federal', curto: 'Deputado(a) federal', raio: 4 },
   stf: { rotulo: 'Ministro(a) do Supremo Tribunal Federal', curto: 'Ministro(a) do STF', raio: 7 },
+  eleito: { rotulo: 'Eleito(a) em 2026, assume em 2027', curto: 'Eleito(a) em 2026', raio: 5 },
   prefeito: { rotulo: 'Prefeito(a) eleito(a) em 2024', curto: 'Prefeito(a)', raio: 4 },
 };
 
@@ -64,6 +65,7 @@ export function textoPartido(pessoa) {
 export function ondeAtua(pessoa, dados) {
   if (pessoa.cargo === 'ministro') return pessoa.pasta;
   if (pessoa.cargo === 'stf') return 'Supremo Tribunal Federal';
+  if (pessoa.cargo === 'eleito') return `${CARGO_ELEITO[pessoa.cargoEleito]} · ${dados.ufPorSigla.get(pessoa.uf)?.nome ?? pessoa.uf}`;
   if (pessoa.cargo === 'prefeito') return `${pessoa.municipio} (${pessoa.uf})`;
   if (pessoa.uf) return dados.ufPorSigla.get(pessoa.uf)?.nome ?? pessoa.uf;
   return 'Brasil';
@@ -121,6 +123,8 @@ export const SITUACOES = {
   'segundo-turno': { icone: '②', rotulo: 'No 2º turno' },
   depende: { icone: '?', rotulo: 'Em aberto' },
 };
+
+export const CARGO_ELEITO = { governador: 'Governador(a) eleito(a)', senador: 'Senador(a) eleito(a)', deputado: 'Deputado(a) federal eleito(a)' };
 
 export const destinoDe = (pessoa, dados) => dados.eleicao?.destino?.[pessoa.id] ?? null;
 

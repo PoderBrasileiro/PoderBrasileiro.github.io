@@ -38,6 +38,7 @@ de uma tabela da Wikipédia, e se o formato dela mudar o parser quebra.
 | Prefeitos | resultado oficial do TSE, eleição de 2024 (eleitos, não necessariamente os atuais) |
 | Transição 2027 (⇄) | resultado oficial do TSE da eleição de 2026, casado por nome com os ocupantes atuais |
 | PECs (estágio e votos) | Dados Abertos da Câmara e do Senado |
+| Eleitos de 2026 que ainda não assumiram | resultado oficial do TSE (os que não ocupam cargo hoje) |
 | Mapa e UFs | IBGE |
 | Presidente e vice | `data/manual.json` |
 | Posição dos partidos | `data/partidos.json` |

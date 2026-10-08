@@ -1,7 +1,7 @@
 // Painel lateral: resumo, UF, lista de ministros ou ficha de uma pessoa.
 
-import { h, trocar, CARGOS, SITUACOES, destinoDe, selo, textoPartido, ondeAtua, fmtNum, fmtData, semAcento } from './comum.js';
-import { ROTULO_VOTO, tiposDeVoto, placarCurto } from './pecs.js';
+import { h, trocar, CARGOS, CARGO_ELEITO, SITUACOES, destinoDe, selo, textoPartido, ondeAtua, fmtNum, fmtData, semAcento } from './comum.js';
+import { ROTULO_VOTO, tiposDeVoto, placarCurto, ETAPAS, etapaDe, trilha, selo as seloPec } from './pecs.js';
 
 function avatar(p, grande = false) {
   const iniciais = p.nome.split(/\s+/).filter((s) => s.length > 2).slice(0, 2).map((s) => s[0]).join('').toUpperCase();
@@ -289,6 +289,7 @@ export function criarPainel(raiz, dados, { aoEscolherPessoa, aoEscolherUf, aoVer
         h('p', { class: 'sobretitulo' }, `Proposta de emenda à Constituição · ${p.casa}`),
         h('h2', {}, p.titulo),
         h('p', {}, p.ementa),
+        h('div', { class: 'pec-etapa' }, trilha(p), seloPec(p), h('p', { class: 'fraco' }, ETAPAS[etapaDe(p)].explica)),
         h('section', {}, h('h3', {}, p.casa === 'Senado' ? 'Estágio no Senado' : 'Estágio na Câmara'),
           e.situacao ? h('p', {}, h('b', {}, e.situacao), e.orgao ? ` — ${e.orgao}` : '') : null,
           e.tramitacao ? h('p', { class: e.situacao ? 'fraco' : null }, e.situacao ? `Último andamento: ${e.tramitacao}` : e.tramitacao) : null,
@@ -327,6 +328,9 @@ export function criarPainel(raiz, dados, { aoEscolherPessoa, aoEscolherUf, aoVer
             h('p', {}, [ondeAtua(p, dados), textoPartido(p)].join(' · ')),
             desde ? h('p', { class: 'fraco' }, `No cargo desde ${desde}`) : null,
             p.vice ? h('p', { class: 'fraco' }, `Vice: ${p.vice.nome} · ${p.vice.partido ?? 'sem partido'}`) : null)),
+        p.cargo === 'eleito' ? h('p', { class: 'aviso' },
+          h('b', {}, 'Ainda não assumiu. '),
+          `Eleito(a) em 2026${p.pct ? `, com ${p.pct}% dos votos válidos` : ''}. A posse é em ${p.cargoEleito === 'governador' ? 'janeiro' : 'fevereiro'} de 2027; até lá não ocupa cargo e não aparece nas votações.`) : null,
         p.cargo === 'prefeito' ? h('p', { class: 'aviso' },
           h('b', {}, 'Resultado da eleição de 2024. '),
           'É quem o TSE registra como eleito, e o partido pelo qual concorreu. Pode não ser quem está no cargo hoje (cassação, renúncia, eleição suplementar) nem o partido atual.') : null,

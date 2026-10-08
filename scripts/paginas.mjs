@@ -21,16 +21,21 @@ const ler = async (nome) => JSON.parse(await readFile(new URL(`data/${nome}`, DI
 const brasil = await ler('brasil.json');
 const eleicao = await ler('eleicao2026.json').catch(() => null);
 
+const CARGO_ELEITO = { governador: 'Governador(a) eleito(a)', senador: 'Senador(a) eleito(a)', deputado: 'Deputado(a) federal eleito(a)' };
 const CARGO = {
   presidente: 'Presidente da República', vice: 'Vice-presidente da República', ministro: 'Ministro(a) de Estado',
   governador: 'Governador(a)', senador: 'Senador(a)', deputado: 'Deputado(a) federal', stf: 'Ministro(a) do Supremo Tribunal Federal',
 };
+// Eleitos em 2026 que ainda não assumiram também ganham página: é por ela que
+// a busca encontra um estreante antes da posse.
+for (const e of eleicao?.estreantes ?? []) brasil.pessoas.push({ ...e, cargo: 'eleito' });
+
 const SITUACAO = { fica: 'Fica em 2027', sai: 'Sai em 2027', muda: 'Muda de cargo em 2027', 'segundo-turno': 'Disputa o 2º turno', depende: 'Situação em aberto para 2027' };
 const ufs = new Map(brasil.ufs.map((u) => [u.sigla, u.nome]));
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 function pagina(p) {
-  const cargo = CARGO[p.cargo];
+  const cargo = p.cargo === 'eleito' ? CARGO_ELEITO[p.cargoEleito] : CARGO[p.cargo];
   const onde = p.cargo === 'ministro' ? p.pasta : p.uf ? ufs.get(p.uf) : null;
   const partido = p.cargo === 'stf' ? null : p.partido === undefined ? null : p.partido ?? 'sem partido';
   const info = partido && brasil.partidos[p.partido];
@@ -47,6 +52,7 @@ function pagina(p) {
     p.desde && ['No cargo desde', p.desde.split('-').reverse().join('/')],
     p.indicadoPor && ['Indicado(a) por', p.indicadoPor],
     d && ['Em 2027', `${SITUACAO[d.situacao]}. ${d.texto}`],
+    p.cargo === 'eleito' && ['Situação', `Eleito(a) em 2026${p.pct ? ` com ${p.pct}% dos votos válidos` : ''}; assume em ${p.cargoEleito === 'governador' ? 'janeiro' : 'fevereiro'} de 2027.`],
   ].filter(Boolean);
 
   return `<!doctype html>

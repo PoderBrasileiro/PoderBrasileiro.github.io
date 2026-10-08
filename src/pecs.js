@@ -3,6 +3,21 @@
 
 import { h, trocar, fmtData } from './comum.js';
 
+// Fita de etapas: mostra onde a PEC está no caminho até virar emenda.
+export function trilha(pec) {
+  const atual = etapaDe(pec);
+  const ordem = ETAPAS[atual].ordem;
+  return h('span', { class: 'trilha', 'aria-hidden': 'true' },
+    Object.entries(ETAPAS).sort((a, b) => a[1].ordem - b[1].ordem)
+      .map(([k, v]) => h('i', { class: `trilha-passo${v.ordem < ordem ? ' feito' : v.ordem === ordem ? ' agora' : ''}`, 'data-etapa': k })));
+}
+
+export const selo = (pec) => {
+  const k = etapaDe(pec);
+  return h('span', { class: 'selo selo-etapa', 'data-etapa': k, title: ETAPAS[k].explica },
+    h('i', { 'aria-hidden': 'true' }, ETAPAS[k].icone), ETAPAS[k].rotulo);
+};
+
 // O Senado registra o motivo de quem não votou em siglas próprias.
 export const ROTULO_VOTO = {
   Sim: 'Sim', 'Não': 'Não', 'Abstenção': 'Abstenção', 'Obstrução': 'Obstrução',
@@ -29,12 +44,38 @@ export function estagioCurto(pec) {
   return v ? `Última votação em plenário: ${v.resultado ?? 'sem resultado informado'}` : 'Sem situação informada';
 }
 
+// Em que pé a PEC está, em linguagem de gente. O caminho é sempre o mesmo:
+// comissão → plenário da casa → a outra casa → promulgação. Cada etapa tem
+// nome, ícone e cor próprios — a cor nunca aparece sozinha.
+export const ETAPAS = {
+  promulgada: { rotulo: 'Virou emenda à Constituição', icone: '✓', ordem: 4, explica: 'Aprovada nas duas casas, em dois turnos, e promulgada. Já faz parte da Constituição.' },
+  'outra-casa': { rotulo: 'Passou numa casa, está na outra', icone: '→', ordem: 3, explica: 'Aprovada em dois turnos numa casa e enviada à outra, onde o processo recomeça.' },
+  plenario: { rotulo: 'Pronta para o plenário', icone: '●', ordem: 2, explica: 'Já passou pela comissão e espera a vez de ser votada pelos deputados ou senadores.' },
+  comissao: { rotulo: 'Em comissão', icone: '○', ordem: 1, explica: 'Ainda em análise de comissão: relator, parecer, admissibilidade. A maioria das PECs para aqui.' },
+};
+
+export function etapaDe(pec) {
+  const s = (pec.estagio.situacao ?? '').toLowerCase();
+  if (/norma jur|promulga/.test(s)) return 'promulgada';
+  if (/apreciação pelo senado|apreciação pela câmara|remetid/.test(s)) return 'outra-casa';
+  if (/pronta para pauta|chancela/.test(s)) return 'plenario';
+  if (s) return 'comissao';
+  // O Senado não informa situação; o texto da sessão é o que resta.
+  const t = (pec.estagio.tramitacao ?? '').toLowerCase();
+  if (/promulga/.test(t)) return 'promulgada';
+  if (/à câmara|a câmara|vai à|remetid/.test(t)) return 'outra-casa';
+  return pec.votacoes.length ? 'plenario' : 'comissao';
+}
+
 export function criarPecs(raiz, dados, { aoEscolherPec }) {
   const lista = h('div', { class: 'pecs' });
   const soNominais = h('input', { type: 'checkbox', checked: true });
   const filtro = h('label', { class: 'pecs-filtro' }, soNominais, ' Só as que tiveram votação nominal em plenário');
   const aviso = h('p', { class: 'fraco' }, 'Carregando…');
-  raiz.append(aviso, filtro, lista);
+  const legenda = h('div', { class: 'pecs-legenda' },
+    Object.entries(ETAPAS).sort((a, b) => a[1].ordem - b[1].ordem).map(([k, v]) =>
+      h('span', { class: 'selo selo-etapa', 'data-etapa': k, title: v.explica }, h('i', { 'aria-hidden': 'true' }, v.icone), v.rotulo)));
+  raiz.append(aviso, legenda, filtro, lista);
 
   function desenhar() {
     const d = dados.pecs;
@@ -44,8 +85,10 @@ export function criarPecs(raiz, dados, { aoEscolherPec }) {
     const visiveis = d.pecs.filter((p) => !soNominais.checked || p.votacoes.length);
     trocar(lista, visiveis.map((p) => {
       const v = p.votacoes[0];
-      return h('button', { class: 'pec', 'data-pec': p.id, onclick: () => aoEscolherPec(p.id) },
+      return h('button', { class: 'pec', 'data-pec': p.id, 'data-etapa': etapaDe(p), onclick: () => aoEscolherPec(p.id) },
         h('span', { class: 'pec-topo' }, h('b', {}, p.titulo), h('span', { class: 'selo' }, p.casa)),
+        trilha(p),
+        selo(p),
         h('span', { class: 'pec-ementa' }, p.ementa),
         h('small', {}, estagioCurto(p)),
         v ? h('small', {}, `${fmtData(v.data)} · ${placarCurto(v)}${v.resultado ? ` · ${v.resultado}` : ''}`) : null);

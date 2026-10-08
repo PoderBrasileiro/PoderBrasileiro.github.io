@@ -59,11 +59,54 @@ export function criarRede(raiz, dados, { aoEscolherPessoa, aoVerMapa }) {
   // Bolinha com nome embaixo, pros poucos cargos em que cabe.
   const comNome = (p, rotulo) => h('div', { class: 'b-nome' }, bolinha(p), h('span', {}, rotulo ?? p.nome));
 
+  // Com retrato, pros cargos em que são poucas pessoas e vale reconhecer a
+  // cara. A foto que não carrega simplesmente sai e deixam-se as iniciais.
+  function comFoto(p, rotulo) {
+    const iniciais = p.nome.split(/\s+/).filter((s) => s.length > 2).slice(0, 2).map((s) => s[0]).join('').toUpperCase();
+    const caixa = h('span', { class: 'q-retrato' }, h('i', { 'aria-hidden': 'true' }, iniciais));
+    if (p.foto) {
+      const img = h('img', { src: p.foto, alt: '', loading: 'lazy', referrerpolicy: 'no-referrer' });
+      img.addEventListener('error', () => img.remove());
+      caixa.append(img);
+    }
+    const alvo = bolinha(p);
+    alvo.classList.add('b-foto');
+    alvo.append(caixa);
+    return h('div', { class: 'b-nome b-nome-foto' }, alvo, h('span', {}, rotulo ?? p.nome));
+  }
+
   const doCargo = (cargo) => dados.pessoas.filter((p) => p.cargo === cargo)
     .sort((a, b) => (posicaoDe(a, dados) ?? 99) - (posicaoDe(b, dados) ?? 99) || a.nome.localeCompare(b.nome, 'pt'));
 
-  const grupo = (titulo, conteudo, nota) => h('div', { class: 'q-grupo' },
-    h('h4', {}, titulo), conteudo, nota ? h('p', { class: 'q-nota' }, nota) : null);
+  // Quanto do grupo está de cada lado, pela posição do partido. Quem não tem
+  // partido ou não está na classificação fica fora da conta, e a barra diz
+  // quantos foram — senão a porcentagem parece falar de todo mundo.
+  function balanco(pessoas) {
+    const pos = pessoas.map((p) => posicaoDe(p, dados)).filter((x) => x != null);
+    if (pos.length < 3) return null;
+    const esq = pos.filter((x) => x < 5).length;
+    const dir = pos.filter((x) => x > 5).length;
+    const centro = pos.length - esq - dir;
+    const fora = pessoas.length - pos.length;
+    // A porcentagem é sobre quem tem partido conhecido, mas a barra cobre o
+    // grupo inteiro: a fatia hachurada mostra de quanta gente não se sabe.
+    const pc = (n) => (100 * n) / pos.length;
+    const largura = (n) => (100 * n) / pessoas.length;
+    return h('div', { class: 'q-balanco' },
+      h('div', { class: 'q-barra', role: 'img', 'aria-label': `${Math.round(pc(esq))}% esquerda, ${Math.round(pc(dir))}% direita, entre ${pos.length} de ${pessoas.length}` },
+        esq ? h('span', { class: 'q-barra-esq', style: `width:${largura(esq)}%` }) : null,
+        centro ? h('span', { class: 'q-barra-meio', style: `width:${largura(centro)}%` }) : null,
+        dir ? h('span', { class: 'q-barra-dir', style: `width:${largura(dir)}%` }) : null,
+        fora ? h('span', { class: 'q-barra-fora', style: `width:${largura(fora)}%` }) : null),
+      h('p', { class: 'q-nota' },
+        h('b', {}, `${Math.round(pc(esq))}%`), ' esquerda · ',
+        h('b', {}, `${Math.round(pc(dir))}%`), ' direita',
+        centro ? ` · ${Math.round(pc(centro))}% no centro` : '',
+        fora ? `, entre os ${pos.length} de ${pessoas.length} com partido conhecido` : ''));
+  }
+
+  const grupo = (titulo, conteudo, nota, pessoas) => h('div', { class: 'q-grupo' },
+    h('h4', {}, titulo), conteudo, pessoas ? balanco(pessoas) : null, nota ? h('p', { class: 'q-nota' }, nota) : null);
   const nuvem = (cargo) => h('div', { class: 'q-nuvem' }, doCargo(cargo).map((p) => bolinha(p)));
 
   // Plenário em semicírculo: cada cadeira é uma pessoa, da esquerda para a
@@ -106,24 +149,27 @@ export function criarRede(raiz, dados, { aoEscolherPessoa, aoVerMapa }) {
       poder('Judiciário', 'julga conforme as leis'),
 
       nivel('União', 'o país inteiro'),
+      // O Executivo desce como organograma: quem nomeia fica acima de quem é
+      // nomeado, com um traço ligando os níveis.
+      celula(h('div', { class: 'q-arvore' },
+        h('div', { class: 'q-no-raiz' },
+          comFoto(dados.pessoaPorId.get('presidente'), `${dados.pessoaPorId.get('presidente').nome} · presidente`)),
+        h('div', { class: 'q-ramo' },
+          h('div', { class: 'q-no' }, comFoto(dados.pessoaPorId.get('vice'), `${dados.pessoaPorId.get('vice').nome} · vice`)),
+          h('div', { class: 'q-no q-no-larga' },
+            grupo(`Ministros (${n('ministro')})`, nuvem('ministro'), 'nomeados e demitidos pelo presidente, sem passar pelo Congresso', doCargo('ministro')))))),
       celula(
-        h('div', { class: 'q-grupo' }, h('h4', {}, 'Presidência'),
-          h('div', { class: 'q-destaques' },
-            comNome(dados.pessoaPorId.get('presidente'), `${dados.pessoaPorId.get('presidente').nome} · presidente`),
-            comNome(dados.pessoaPorId.get('vice'), `${dados.pessoaPorId.get('vice').nome} · vice`))),
-        grupo(`Ministros (${n('ministro')})`, nuvem('ministro'))),
-      celula(
-        grupo(`Senado (${n('senador')})`, plenario('senador', 4), '3 senadores por estado. Cada cadeira é uma pessoa, da esquerda para a direita.'),
-        grupo(`Câmara dos Deputados (${n('deputado')})`, plenario('deputado', 11), 'bancada proporcional à população do estado')),
+        grupo(`Senado (${n('senador')})`, plenario('senador', 4), '3 senadores por estado. Cada cadeira é uma pessoa, da esquerda para a direita.', doCargo('senador')),
+        grupo(`Câmara dos Deputados (${n('deputado')})`, plenario('deputado', 11), 'bancada proporcional à população do estado', doCargo('deputado'))),
       celula(
         grupo(`Supremo Tribunal Federal (${stf.length} de 11)`,
-          h('div', { class: 'q-destaques q-stf' }, stf.map((p) => comNome(p, p.funcao ? `${p.nome} · ${p.funcao}` : p.nome))),
-          'Ministros do STF não têm partido. São indicados pelo presidente e aprovados pelo Senado.'),
+          h('div', { class: 'q-destaques q-stf' }, stf.map((p) => comFoto(p, p.funcao ? `${p.nome} · ${p.funcao}` : p.nome))),
+          'Ministros do STF não têm partido, então não entram na conta de esquerda e direita. São indicados pelo presidente e aprovados pelo Senado.'),
         fora('Demais tribunais', 'STJ, TSE, TST, STM e a Justiça Federal não estão neste site.')),
 
       nivel('Estados', '26 estados e o DF'),
       celula(grupo(`Governadores (${n('governador')})`,
-        h('div', { class: 'q-destaques q-gov' }, doCargo('governador').map((p) => comNome(p, p.uf))))),
+        h('div', { class: 'q-destaques q-gov' }, doCargo('governador').map((p) => comNome(p, p.uf))), null, doCargo('governador'))),
       celula(fora('Assembleias legislativas', 'Deputados estaduais não estão neste site.')),
       celula(fora('Tribunais de Justiça', 'A Justiça estadual não está neste site.')),
 
