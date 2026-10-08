@@ -112,10 +112,10 @@ function desenharLegenda() {
   el.replaceChildren(
     h('div', { class: 'legenda-item' },
       h('span', {}, 'esquerda'), h('span', { class: 'legenda-rampa' }), h('span', {}, 'direita')),
-    h('div', { class: 'legenda-item' }, h('span', { class: 'legenda-hachura' }), h('span', {}, 'sem partido ou não informado')),
+    h('div', { class: 'legenda-item' }, h('span', { class: 'legenda-hachura' }), h('span', {}, 'Sem partido ou não informado')),
     aba === 'mapa'
-      ? h('div', { class: 'legenda-item fraco' }, 'Cor = partido do governador (estados) ou do prefeito eleito em 2024 (municípios)')
-      : h('div', { class: 'legenda-item fraco' }, 'Cada bolinha é uma pessoa. Em cada grupo, ordenadas da esquerda para a direita. Cinza liso = cargo sem partido (STF).'));
+      ? h('div', { class: 'legenda-item fraco' }, 'Cor: partido do governador ou, nos municípios, do prefeito eleito em 2024')
+      : h('div', { class: 'legenda-item fraco' }, 'Cada bolinha é uma pessoa, ordenada da esquerda para a direita dentro do grupo. Cinza liso: cargo sem partido.'));
 }
 
 // ---------- lista (a visão em tabela dos mesmos dados) ----------

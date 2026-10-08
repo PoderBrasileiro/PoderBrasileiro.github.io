@@ -427,3 +427,15 @@ span.votante { color: var(--texto-2); border-style: dashed; }
 .presenca small { color: var(--texto-3); }
 .presenca-ponto { width: 8px; height: 8px; border-radius: 50%; background: #0ca30c; flex: none; animation: pulsar 2.4s ease-in-out infinite; }
 @keyframes pulsar { 50% { opacity: 0.35; } }
+
+/* Entrada em cascata: as colunas e linhas do quadro chegam em sequência, o
+   que deixa a estrutura legível antes do conteúdo. Reinicia a cada troca de
+   aba porque sair de display:none reinicia a animação. */
+@keyframes entrar { from { opacity: 0; transform: translateY(10px) scale(0.985); } }
+.quadro .q-poder, .quadro .q-nivel, .quadro .q-celula { animation: entrar 0.46s cubic-bezier(0.2, 0.9, 0.25, 1) both; animation-delay: calc(var(--i, 0) * 42ms); }
+#vis-mapa > *, #vis-pecs > *, #vis-lista > * { animation: entrar 0.42s cubic-bezier(0.2, 0.9, 0.25, 1) both; }
+#vis-mapa > :nth-child(2), #vis-pecs > :nth-child(2), #vis-lista > :nth-child(2) { animation-delay: 60ms; }
+#vis-mapa > :nth-child(3), #vis-pecs > :nth-child(3), #vis-lista > :nth-child(3) { animation-delay: 110ms; }
+/* O conteúdo da aba já entra pelas peças de dentro; o bloco todo só aparece. */
+.aba-conteudo:not([hidden]) { animation: aparecer 0.2s ease-out both; }
+@keyframes aparecer { from { opacity: 0; } }

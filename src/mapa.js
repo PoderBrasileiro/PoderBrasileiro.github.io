@@ -68,6 +68,7 @@ export function criarMapa(raiz, dados, { aoEscolherUf, aoEscolherPessoa, aoVerMi
 
   const malhas = new Map();   // UF -> Promise da malha
   let escala = null;
+  let encaixeAtual = null;   // guardado pra animar a volta
   let ufAberta = null;        // UF cujos municípios estão desenhados
   let ufPedida = null;        // última UF pedida (a malha chega depois)
   let municipioAtivo = null;
@@ -89,30 +90,46 @@ export function criarMapa(raiz, dados, { aoEscolherUf, aoEscolherPessoa, aoVerMi
   const RAPIDO = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const dur = (ms) => (RAPIDO ? 0 : ms);
 
-  function aproximar(uf) {
+  const DURACAO = 620;
+  const SUAVE = d3.easeCubicInOut;
+
+  // O transform que leva um ponto do mapa do Brasil a ficar onde ele está no
+  // mapa só daquele estado. É o que faz o zoom ser contínuo: o estado não
+  // troca de lugar, ele cresce do tamanho que tinha até encher a tela.
+  function encaixe(uf, caminhoUf, malhaUf) {
     const f = dados.malha.features.find((x) => x.properties.sigla === uf);
-    if (!f) return;
-    const [[x0, y0], [x1, y1]] = caminho.bounds(f);
-    const k = Math.min(6, 0.8 / Math.max((x1 - x0) / L, (y1 - y0) / A));
-    gBrasil.transition().duration(dur(420)).ease(d3.easeCubicInOut)
-      .attr('transform', `translate(${L / 2},${A / 2}) scale(${k}) translate(${-(x0 + x1) / 2},${-(y0 + y1) / 2})`)
-      .style('opacity', 0);
+    if (!f) return null;
+    const [[x0, y0], [x1, y1]] = caminho.bounds(f);            // onde o estado está no Brasil
+    const [[u0, v0], [u1, v1]] = caminhoUf.bounds(malhaUf);    // onde ele está sozinho
+    const k = Math.min((x1 - x0) / (u1 - u0), (y1 - y0) / (v1 - v0));
+    return {
+      // Estado pequeno no mapa do país: é este transform aplicado ao mapa do
+      // estado (começa miúdo, no lugar certo, e abre).
+      doEstado: `translate(${(x0 + x1) / 2 - (k * (u0 + u1)) / 2},${(y0 + y1) / 2 - (k * (v0 + v1)) / 2}) scale(${k})`,
+      // O inverso, aplicado ao mapa do país: ele se aproxima do estado.
+      doPais: `translate(${L / 2 - (x0 + x1) / 2 / k},${A / 2 - (y0 + y1) / 2 / k}) scale(${1 / k})`,
+    };
   }
 
   function mostrarBrasil() {
+    const volta = encaixeAtual;
     ufAberta = null;
-    gUf.style('display', 'none').selectAll('*').remove();
+    encaixeAtual = null;
     municipios = null;
-    gBrasil.style('display', null).interrupt()
-      .transition().duration(dur(360)).ease(d3.easeCubicOut)
-      .attr('transform', null).style('opacity', 1);
     voltar.hidden = true;
+    gBrasil.interrupt().style('display', null)
+      .transition().duration(dur(DURACAO)).ease(SUAVE)
+      .attr('transform', null).style('opacity', 1);
+    if (!volta) return gUf.style('display', 'none').selectAll('*').remove();
+    // O estado encolhe de volta pro lugar que ocupa no país, em vez de sumir.
+    gUf.interrupt().transition().duration(dur(DURACAO)).ease(SUAVE)
+      .attr('transform', volta.doEstado).style('opacity', 0)
+      .on('end interrupt', () => { if (!ufAberta) gUf.style('display', 'none').selectAll('*').remove(); });
   }
 
   async function abrirUf(uf) {
     ufPedida = uf;
     if (ufAberta === uf) return pintarMunicipios();
-    if (!ufAberta) aproximar(uf);
     if (!malhas.has(uf)) malhas.set(uf, carregarMalhaUf(uf).then((m) => (corrigirSentido(m), m)));
     let malha;
     try { malha = await malhas.get(uf); } catch { malhas.delete(uf); return; }   // sem malha: fica o mapa do Brasil
@@ -129,13 +146,19 @@ export function criarMapa(raiz, dados, { aoEscolherUf, aoEscolherPessoa, aoVerMi
       .on('pointerleave', esconderDica)
       .on('click', (ev, f) => { const p = prefeitoDe(f); if (p) aoEscolherPessoa(p.id); });
     ufAberta = uf;
-    gBrasil.style('display', 'none');
-    gUf.style('display', null)
-      .attr('transform', `translate(${L / 2},${A / 2}) scale(1.35) translate(${-L / 2},${-A / 2})`).style('opacity', 0)
-      .transition().duration(dur(380)).ease(d3.easeCubicOut)
-      .attr('transform', null).style('opacity', 1);
+    encaixeAtual = encaixe(uf, caminhoUf, malha);
     voltar.hidden = false;
     pintarMunicipios();
+
+    // Os dois mapas se movem juntos: o país se aproxima e desaparece enquanto
+    // o estado cresce do mesmo ponto. É um único movimento, não uma troca.
+    gBrasil.interrupt().transition().duration(dur(DURACAO)).ease(SUAVE)
+      .attr('transform', encaixeAtual?.doPais ?? null).style('opacity', 0)
+      .on('end interrupt', () => { if (ufAberta) gBrasil.style('display', 'none'); });
+    gUf.interrupt().style('display', null)
+      .attr('transform', encaixeAtual?.doEstado ?? null).style('opacity', 0)
+      .transition().duration(dur(DURACAO)).ease(SUAVE)
+      .attr('transform', null).style('opacity', 1);
   }
 
   return {

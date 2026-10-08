@@ -39,10 +39,10 @@ function blocoEspectro(p, dados) {
     return sec.append(h('p', { class: 'fraco' }, `Ministros do STF não têm filiação partidária, então não há posição a mostrar.${p.indicadoPor ? ` Indicado(a) ao tribunal por ${p.indicadoPor}.` : ''}`)), sec;
   }
   if (p.partido === undefined) {
-    return sec.append(h('p', { class: 'fraco' }, 'A fonte oficial não informa o partido desta pessoa, então não há posição a mostrar. Dá pra preencher à mão em data/manual.json.')), sec;
+    return sec.append(h('p', { class: 'fraco' }, 'A fonte oficial não informa o partido, então não há posição a mostrar.')), sec;
   }
   if (p.partido === null) {
-    return sec.append(h('p', { class: 'fraco' }, 'Sem filiação partidária — não há posição de partido a mostrar.')), sec;
+    return sec.append(h('p', { class: 'fraco' }, 'Sem filiação partidária.')), sec;
   }
   const info = dados.partidos[p.partido];
   if (!info) {
@@ -56,7 +56,7 @@ function blocoEspectro(p, dados) {
     regua(dir, ['esquerda', 'direita']),
     h('p', { class: 'fraco' },
       `Posição do ${p.partido} (${info.nome}): ${fmtNum(info.posicao, 2)} numa régua de 0 a 10, segundo classificação feita por cientistas políticos. `,
-      'É a posição do partido, não uma medida desta pessoa.',
+      'Vale para o partido, não para a pessoa.',
       info.origem === 'estimado' ? ` Valor estimado: ${info.nota}` : ''));
   return sec;
 }
@@ -111,7 +111,7 @@ function resumoTransicao(dados) {
     h('p', {}, h('b', {}, 'Governadores: '), conta('governador'), emAberto.length ? `. 2º turno em ${emAberto.join(', ')}.` : '.'),
     h('p', {}, h('b', {}, 'Senadores: '), conta('senador'), '.'),
     h('p', {}, h('b', {}, 'Deputados federais: '), conta('deputado'), '.'),
-    h('p', { class: 'fraco' }, 'Resultado oficial do TSE da eleição de 2026, cruzado com quem está no cargo hoje. As posses são em janeiro (Executivo) e fevereiro (Congresso) de 2027.'));
+    h('p', { class: 'fraco' }, 'Resultado oficial do TSE cruzado com quem está no cargo. Posses em janeiro e fevereiro de 2027.'));
 }
 
 function blocoVotos(p, dados) {
@@ -119,7 +119,7 @@ function blocoVotos(p, dados) {
   const v = dados.votos;
   const sec = h('section', {}, h('h3', {}, 'Como votou no plenário'));
   if (!p.votos) {
-    sec.append(h('p', { class: 'fraco' }, 'Sem voto registrado nas votações nominais do período.'));
+    sec.append(h('p', { class: 'fraco' }, 'Sem voto registrado no período.'));
     return sec;
   }
   const total = p.votos.comEsquerda + p.votos.comDireita;
@@ -144,7 +144,7 @@ function blocoNoticias(p, dados) {
     h('h3', {}, 'Investigações e notícias'),
     h('p', { class: 'aviso' },
       h('b', {}, 'Resultados automáticos. '),
-      'Tudo abaixo é busca pelo nome, sem curadoria: pode trazer homônimos e matérias em que a pessoa só é citada. Ser citado ou investigado não é ser culpado — confira sempre a fonte original.'));
+      'Busca pelo nome, sem curadoria: pode trazer homônimo ou simples citação. Ser investigado não é ser culpado.'));
 
   const reg = dados.noticias?.porId?.[p.id];
   if (reg?.itens?.length) {
@@ -155,8 +155,8 @@ function blocoNoticias(p, dados) {
     h('p', { class: 'fraco' }, `Dos feeds RSS de ${(dados.noticias.fontes ?? []).join(', ')}. Atualizado em ${fmtData(reg.buscadoEm)}.`));
   } else {
     sec.append(h('p', { class: 'fraco' }, reg
-      ? 'Nenhuma manchete recente dos veículos acompanhados cita este nome junto de termos de investigação.'
-      : 'Ainda não há coleta automática para este nome. Use as buscas abaixo.'));
+      ? 'Nenhuma manchete recente cita este nome junto de termos de investigação.'
+      : 'Sem coleta automática para este nome ainda.'));
   }
 
   const buscas = [
@@ -237,7 +237,7 @@ export function criarPainel(raiz, dados, { aoEscolherPessoa, aoEscolherUf, aoVer
       const t = semAcento(campo.value.trim());
       const vis = lista.filter((m) => !t || semAcento(`${m.municipio} ${m.nome ?? ''} ${m.partido ?? ''}`).includes(t));
       trocar(ul, vis.length ? vis.map((m) => h('li', {}, m.pendente
-        ? h('span', { class: 'prefeito-linha fraco' }, h('b', {}, m.municipio), h('small', {}, 'sem eleito no resultado do TSE'))
+        ? h('span', { class: 'prefeito-linha fraco' }, h('b', {}, m.municipio), h('small', {}, 'Sem eleito no resultado do TSE'))
         : h('button', { class: 'prefeito-linha', onclick: () => aoEscolherPessoa(`prefeito-${m.ibge}`) },
           h('b', {}, m.municipio), h('small', {}, `${m.nome} · ${m.partido ?? 'sem partido'}`))))
         : h('li', { class: 'fraco' }, 'Nenhum município encontrado.'));
@@ -253,7 +253,7 @@ export function criarPainel(raiz, dados, { aoEscolherPessoa, aoEscolherUf, aoVer
       const conta = (c) => dados.pessoas.filter((p) => p.cargo === c).length;
       trocar(raiz, 
         h('h2', {}, 'Comece por aqui'),
-        h('p', {}, 'Clique num estado do mapa pra ver governador, senadores, deputados e prefeitos, ou numa bolinha da rede de poder pra abrir a ficha de alguém.'),
+        h('p', {}, 'Clique num estado do mapa, ou numa bolinha da rede de poder, para abrir quem está lá.'),
         h('ul', { class: 'contagem' },
           h('li', {}, h('b', {}, '2'), ' na Presidência'),
           h('li', {}, h('b', {}, conta('ministro')), ' ministros'),
@@ -317,7 +317,7 @@ export function criarPainel(raiz, dados, { aoEscolherPessoa, aoEscolherUf, aoVer
           e.situacao ? h('p', {}, h('b', {}, e.situacao), e.orgao ? ` — ${e.orgao}` : '') : null,
           e.tramitacao ? h('p', { class: e.situacao ? 'fraco' : null }, e.situacao ? `Último andamento: ${e.tramitacao}` : e.tramitacao) : null,
           e.data ? h('p', { class: 'fraco' }, `Em ${fmtData(e.data)}.`) : null,
-          h('p', { class: 'fraco' }, 'Uma PEC precisa de 3/5 dos votos, em dois turnos, em cada casa: 308 deputados e 49 senadores.'),
+          h('p', { class: 'fraco' }, 'Precisa de 3/5 em dois turnos nas duas casas: 308 deputados e 49 senadores.'),
           h('ul', { class: 'buscas' }, h('li', {}, h('a', { href: p.link, target: '_blank', rel: 'noopener noreferrer' }, `Tramitação completa na ${p.casa === 'Senado' ? 'página do Senado' : 'página da Câmara'} ↗`)))),
         p.votacoes.length
           ? p.votacoes.map((v) => h('section', {},
@@ -327,7 +327,7 @@ export function criarPainel(raiz, dados, { aoEscolherPessoa, aoEscolherUf, aoVer
             tiposDeVoto(v.votos).map((t) => h('details', { class: 'votos' },
               h('summary', {}, `${ROTULO_VOTO[t] ?? t} (${v.votos[t].length})`),
               h('div', { class: 'votantes' }, v.votos[t].map(votante).sort((a, b) => a.textContent.localeCompare(b.textContent, 'pt')))))))
-          : h('section', {}, h('p', { class: 'fraco' }, 'Sem votação nominal em plenário no período. Votações simbólicas não registram o voto de cada parlamentar.')));
+          : h('section', {}, h('p', { class: 'fraco' }, 'Sem votação nominal no período: a simbólica não registra voto individual.')));
       raiz.scrollTop = 0;
     },
 
@@ -353,10 +353,10 @@ export function criarPainel(raiz, dados, { aoEscolherPessoa, aoEscolherUf, aoVer
             p.vice ? h('p', { class: 'fraco' }, `Vice: ${p.vice.nome} · ${p.vice.partido ?? 'sem partido'}`) : null)),
         p.cargo === 'eleito' ? h('p', { class: 'aviso' },
           h('b', {}, 'Ainda não assumiu. '),
-          `Eleito(a) em 2026${p.pct ? `, com ${p.pct}% dos votos válidos` : ''}. A posse é em ${p.cargoEleito === 'governador' ? 'janeiro' : 'fevereiro'} de 2027; até lá não ocupa cargo e não aparece nas votações.`) : null,
+          `Eleito(a) em 2026${p.pct ? `, com ${p.pct}% dos votos válidos` : ''}. A posse é em ${p.cargoEleito === 'governador' ? 'janeiro' : 'fevereiro'} de 2027.`) : null,
         p.cargo === 'prefeito' ? h('p', { class: 'aviso' },
           h('b', {}, 'Resultado da eleição de 2024. '),
-          'É quem o TSE registra como eleito, e o partido pelo qual concorreu. Pode não ser quem está no cargo hoje (cassação, renúncia, eleição suplementar) nem o partido atual.') : null,
+          'Quem o TSE registra como eleito, pelo partido de então. Pode não ser quem está no cargo hoje.') : null,
         compartilhar(),
         blocoDestino(p, dados),
         blocoEspectro(p, dados),

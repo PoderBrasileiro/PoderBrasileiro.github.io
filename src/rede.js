@@ -103,7 +103,7 @@ export function criarRede(raiz, dados, { aoEscolherPessoa, aoVerMapa }) {
     svg.append('path').attr('class', 'q-linha')
       .attr('d', pts.map(([x, y], i) => `${i ? 'L' : 'M'}${x.toFixed(1)},${(A - y * A).toFixed(1)}`).join(' '));
     return h('div', { class: 'q-evolucao' }, svg.node(),
-      h('p', { class: 'q-nota' }, `Fatia de direita em ${dias.length} dias de registro: ${Math.round(pts[0][1] * 100)}% → ${Math.round(ultimo * 100)}%`));
+      h('p', { class: 'q-nota' }, `Direita em ${dias.length} dias: ${Math.round(pts[0][1] * 100)}% → ${Math.round(ultimo * 100)}%`));
   }
 
   const grupo = (titulo, conteudo, nota, pessoas, cargo) => h('div', { class: 'q-grupo' },
@@ -126,9 +126,11 @@ export function criarRede(raiz, dados, { aoEscolherPessoa, aoVerMapa }) {
   const stf = dados.pessoas.filter((p) => p.cargo === 'stf');
   const prefeitos = h('p', { class: 'q-nota' }, 'Carregando…');
 
-  const celula = (...filhos) => h('div', { class: 'q-celula' }, filhos);
-  const nivel = (nome, sub) => h('div', { class: 'q-nivel' }, h('b', {}, nome), h('small', {}, sub));
-  const poder = (nome, sub) => h('div', { class: 'q-poder' }, h('b', {}, nome), h('small', {}, sub));
+  // --i é o lugar na cascata de entrada; o CSS vira isso em atraso.
+  let passo = 0;
+  const celula = (...filhos) => h('div', { class: 'q-celula', style: `--i:${passo++}` }, filhos);
+  const nivel = (nome, sub) => h('div', { class: 'q-nivel', style: `--i:${passo++}` }, h('b', {}, nome), h('small', {}, sub));
+  const poder = (nome, sub) => h('div', { class: 'q-poder', style: `--i:${passo++}` }, h('b', {}, nome), h('small', {}, sub));
 
   // Liga/desliga a leitura "quem fica, quem sai": a cor continua sendo o
   // partido; o que muda é o contorno e a opacidade de cada bolinha.
@@ -146,11 +148,11 @@ export function criarRede(raiz, dados, { aoEscolherPessoa, aoVerMapa }) {
     legendaTransicao,
     h('div', { class: 'q-grade' },
       h('div', {}),
-      poder('Executivo', 'governa e executa as leis'),
-      poder('Legislativo', 'faz as leis e fiscaliza'),
-      poder('Judiciário', 'julga conforme as leis'),
+      poder('Executivo', 'Governa e executa as leis'),
+      poder('Legislativo', 'Faz as leis e fiscaliza'),
+      poder('Judiciário', 'Julga conforme as leis'),
 
-      nivel('União', 'o país inteiro'),
+      nivel('União', 'O país inteiro'),
       // O Executivo desce como organograma: quem nomeia fica acima de quem é
       // nomeado, com um traço ligando os níveis.
       celula(h('div', { class: 'q-arvore' },
@@ -159,10 +161,10 @@ export function criarRede(raiz, dados, { aoEscolherPessoa, aoVerMapa }) {
         h('div', { class: 'q-ramo' },
           h('div', { class: 'q-no' }, comFoto(dados.pessoaPorId.get('vice'), `${dados.pessoaPorId.get('vice').nome} · vice`)),
           h('div', { class: 'q-no q-no-larga' },
-            grupo(`Ministros (${n('ministro')})`, nuvem('ministro'), 'nomeados e demitidos pelo presidente, sem passar pelo Congresso', doCargo('ministro'), 'ministro'))))),
+            grupo(`Ministros (${n('ministro')})`, nuvem('ministro'), 'Nomeados pelo presidente, sem passar pelo Congresso.', doCargo('ministro'), 'ministro'))))),
       celula(
-        grupo(`Senado (${n('senador')})`, plenario('senador', 4), '3 senadores por estado. Cada cadeira é uma pessoa, da esquerda para a direita.', doCargo('senador'), 'senador'),
-        grupo(`Câmara dos Deputados (${n('deputado')})`, plenario('deputado', 11), 'bancada proporcional à população do estado', doCargo('deputado'), 'deputado')),
+        grupo(`Senado (${n('senador')})`, plenario('senador', 4), '3 senadores por estado.', doCargo('senador'), 'senador'),
+        grupo(`Câmara dos Deputados (${n('deputado')})`, plenario('deputado', 11), 'Bancada proporcional à população do estado.', doCargo('deputado'), 'deputado')),
       celula(
         // Agrupado por quem indicou: é o que mostra a marca que cada governo
         // deixou num tribunal com mandato vitalício.
@@ -171,22 +173,22 @@ export function criarRede(raiz, dados, { aoEscolherPessoa, aoVerMapa }) {
             d3.groups(stf, (p) => p.indicadoPor ?? 'Indicação não informada')
               .sort((a, b) => b[1].length - a[1].length)
               .map(([quem, gente]) => h('div', { class: 'q-indicacao' },
-                h('h5', {}, h('b', {}, quem), h('small', {}, `indicou ${gente.length} de ${stf.length}`)),
+                h('h5', {}, h('b', {}, quem), h('small', {}, `Indicou ${gente.length} de ${stf.length}`)),
                 h('div', { class: 'q-destaques q-stf' }, gente.map((p) => comFoto(p, p.funcao ? `${p.nome} · ${p.funcao}` : p.nome)))))),
-          'Ministros do STF não têm partido, então não entram na conta de esquerda e direita. São indicados pelo presidente e aprovados pelo Senado, e ficam até os 75 anos.'),
-        fora('Demais tribunais', 'STJ, TSE, TST, STM e a Justiça Federal não estão neste site.')),
+          'Sem partido, então fora da conta de esquerda e direita. Ficam até os 75 anos.'),
+        fora('Demais tribunais', 'STJ, TSE, TST, STM e Justiça Federal: fora deste site.')),
 
-      nivel('Estados', '26 estados e o DF'),
+      nivel('Estados', '26 estados e o Distrito Federal'),
       celula(grupo(`Governadores (${n('governador')})`,
         h('div', { class: 'q-destaques q-gov' }, doCargo('governador').map((p) => comNome(p, p.uf))), null, doCargo('governador'), 'governador')),
-      celula(fora('Assembleias legislativas', 'Deputados estaduais não estão neste site.')),
-      celula(fora('Tribunais de Justiça', 'A Justiça estadual não está neste site.')),
+      celula(fora('Assembleias legislativas', 'Deputados estaduais: fora deste site.')),
+      celula(fora('Tribunais de Justiça', 'Justiça estadual: fora deste site.')),
 
       nivel('Municípios', '5.569 cidades'),
       celula(h('div', { class: 'q-grupo' }, h('h4', {}, 'Prefeitos'), prefeitos,
         h('button', { class: 'botao', onclick: aoVerMapa }, 'Ver no mapa'))),
-      celula(fora('Câmaras municipais', 'Vereadores não estão neste site.')),
-      celula(fora('—', 'Não existe Judiciário municipal: as cidades são atendidas pela Justiça estadual.'))));
+      celula(fora('Câmaras municipais', 'Vereadores: fora deste site.')),
+      celula(fora('—', 'Não existe: as cidades são atendidas pela Justiça estadual.'))));
 
   raiz.append(quadro);
 
@@ -209,7 +211,7 @@ export function criarRede(raiz, dados, { aoEscolherPessoa, aoVerMapa }) {
     atualizarPrefeitos() {
       const total = dados.pessoas.filter((p) => p.cargo === 'prefeito').length;
       prefeitos.textContent = total
-        ? `${total.toLocaleString('pt-BR')} prefeitos eleitos em 2024. São bolinhas demais pra caber aqui: estão no mapa, estado por estado.`
+        ? `${total.toLocaleString('pt-BR')} prefeitos eleitos em 2024. São bolinhas demais para caber aqui; estão no mapa.`
         : 'Dados de prefeitos indisponíveis.';
     },
   };

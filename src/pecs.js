@@ -41,17 +41,17 @@ export function estagioCurto(pec) {
   const e = pec.estagio;
   if (e.situacao) return `${e.situacao}${e.orgao ? ` (${e.orgao})` : ''}`;
   const v = pec.votacoes[0];
-  return v ? `Última votação em plenário: ${v.resultado ?? 'sem resultado informado'}` : 'Sem situação informada';
+  return v ? `Última votação em plenário: ${v.resultado ?? 'Sem resultado informado'}` : 'Sem situação informada';
 }
 
 // Em que pé a PEC está, em linguagem de gente. O caminho é sempre o mesmo:
 // comissão → plenário da casa → a outra casa → promulgação. Cada etapa tem
 // nome, ícone e cor próprios — a cor nunca aparece sozinha.
 export const ETAPAS = {
-  promulgada: { rotulo: 'Virou emenda à Constituição', icone: '✓', ordem: 4, explica: 'Aprovada nas duas casas, em dois turnos, e promulgada. Já faz parte da Constituição.' },
-  'outra-casa': { rotulo: 'Passou numa casa, está na outra', icone: '→', ordem: 3, explica: 'Aprovada em dois turnos numa casa e enviada à outra, onde o processo recomeça.' },
-  plenario: { rotulo: 'Pronta para o plenário', icone: '●', ordem: 2, explica: 'Já passou pela comissão e espera a vez de ser votada pelos deputados ou senadores.' },
-  comissao: { rotulo: 'Em comissão', icone: '○', ordem: 1, explica: 'Ainda em análise de comissão: relator, parecer, admissibilidade. A maioria das PECs para aqui.' },
+  promulgada: { rotulo: 'Virou emenda à Constituição', icone: '✓', ordem: 4, explica: 'Aprovada nas duas casas e promulgada. Já faz parte da Constituição.' },
+  'outra-casa': { rotulo: 'Passou numa casa, está na outra', icone: '→', ordem: 3, explica: 'Aprovada numa casa e enviada à outra, onde o processo recomeça.' },
+  plenario: { rotulo: 'Pronta para o plenário', icone: '●', ordem: 2, explica: 'Passou pela comissão e espera a vez de ser votada.' },
+  comissao: { rotulo: 'Em comissão', icone: '○', ordem: 1, explica: 'Em análise de comissão. A maioria das PECs para aqui.' },
 };
 
 export function etapaDe(pec) {
@@ -81,7 +81,7 @@ export function criarPecs(raiz, dados, { aoEscolherPec }) {
     const d = dados.pecs;
     if (d === undefined) return;
     if (!d) { aviso.textContent = 'Dados de PECs indisponíveis. Rode "npm run pecs".'; filtro.hidden = true; return; }
-    aviso.textContent = `PECs com movimento desde ${fmtData(d.de)}, segundo os dados abertos da Câmara e do Senado. Cada casa numera e informa a PEC do seu jeito, então a mesma proposta pode aparecer duas vezes — uma por casa.`;
+    aviso.textContent = `PECs com movimento desde ${fmtData(d.de)}, pelos dados abertos da Câmara e do Senado. A mesma proposta aparece uma vez por casa.`;
     const visiveis = d.pecs.filter((p) => !soNominais.checked || p.votacoes.length);
     trocar(lista, visiveis.map((p) => {
       const v = p.votacoes[0];
