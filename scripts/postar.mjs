@@ -14,9 +14,10 @@
 // MAX_POR_RODADA existe porque uma lista de "já postados" perdida ou zerada
 // faria o script despejar dezenas de posts antigos de uma vez.
 
-import { readFile, writeFile } from 'node:fs/promises';
+import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { createHmac, randomBytes } from 'node:crypto';
 import { ETAPAS, etapaDe } from '../src/etapas.js';
+import * as bluesky from './bluesky.mjs';
 
 const RAIZ = new URL('..', import.meta.url);
 const ESTADO = 'data/postados.json';
@@ -161,7 +162,10 @@ async function postarNoX(texto, chaves, imagem = null) {
 
 // ---------- principal ----------
 
-const estado = { postados: [], pendentes: {}, etapas: {}, composicao: {}, ...(await ler(ESTADO, {})) };
+const estado = { postados: [], pendentes: {}, etapas: {}, composicao: {}, feitos: {}, ...(await ler(ESTADO, {})) };
+// Os 43 itens antigos valem pros três canais: são votações de 2025 que não
+// devem reaparecer em lugar nenhum.
+for (const canal of ['x', 'bsky', 'relatorio']) estado.feitos[canal] ??= [...estado.postados];
 const pecs = await ler('public/data/pecs.json', null);
 const eleicao = await ler('public/data/eleicao2026.json', null);
 const historico = await ler('public/data/historico.json', null);
@@ -169,7 +173,9 @@ const fila = novidades(pecs, eleicao, historico, estado);
 const gravar = () => writeFile(new URL(ESTADO, RAIZ), JSON.stringify(estado, null, 1) + '\n');
 
 if (process.argv.includes('--semear')) {
-  estado.postados.push(...fila.filter((i) => !i.resolve).map((i) => i.id));
+  const ids = fila.filter((i) => !i.resolve).map((i) => i.id);
+  estado.postados.push(...ids);
+  for (const canal of ['x', 'bsky', 'relatorio']) estado.feitos[canal].push(...ids);
   await gravar();
   console.log(`Semeado: ${estado.postados.length} itens marcados como já postados; ${Object.keys(estado.pendentes).length} disputas de 2º turno acompanhadas.`);
   process.exit(0);
@@ -222,54 +228,115 @@ if (process.argv.some((a) => a.startsWith('--composicao'))) {
   console.log(`postado: https://x.com/i/status/${await postarNoX(texto, chaves, img)}`);
   process.exit(0);
 }
-if (!fila.length) console.log('Nada novo pra postar.');
-if (fila.length > MAX_POR_RODADA) console.warn(`${fila.length} itens na fila; só os ${MAX_POR_RODADA} mais antigos vão nesta rodada.`);
+// ---------- a pauta do dia ----------
 
-// Dia parado: sai um retrato de um dos grupos, em rodízio. É o que mantém o
-// perfil vivo fora de sessão legislativa sem inventar notícia — o conteúdo é
-// o mesmo dado do site, e o rodízio evita repetir o mesmo grupo.
+// Dia parado: entra um retrato de um dos grupos, em rodízio. É o que mantém o
+// perfil vivo fora de sessão legislativa sem inventar notícia — o conteúdo é o
+// mesmo dado do site, e o rodízio evita repetir o grupo.
 const RODIZIO = ['senador', 'deputado', 'governador', 'ministro', 'prefeito'];
 const DIAS_ENTRE_RETRATOS = 2;
+const hoje = new Date().toISOString().slice(0, 10);
 
-if (!fila.length && !ensaio) {
-  const hoje = new Date().toISOString().slice(0, 10);
+async function retratoDoDia() {
   const ultimo = estado.composicao.quando;
   const faz = ultimo ? (Date.parse(hoje) - Date.parse(ultimo)) / 864e5 : 99;
-  if (faz >= DIAS_ENTRE_RETRATOS) {
-    const cargo = RODIZIO[((RODIZIO.indexOf(estado.composicao.cargo) + 1) || 0) % RODIZIO.length];
-    try {
-      const { cartaoDoGrupo } = await import('./imagens.mjs');
-      const { png, balanco: b, titulo } = cartaoDoGrupo(cargo);
-      const texto = montar(`${titulo} hoje: ${b.dir}% de direita e ${b.esq}% de esquerda.`,
-        `Contagem de cabeças pela posição do partido, entre os ${b.conhecidos.toLocaleString('pt-BR')} com partido conhecido.`,
-        `${SITE}#rede`);
-      console.log(`--- retrato:${cargo}\n${texto}\n`);
-      const alt = `Gráfico de ${titulo.toLowerCase()}: ${b.gente.length} pessoas ordenadas da esquerda (vermelho) para a direita (azul) pela posição do partido. ${b.esq}% de esquerda e ${b.dir}% de direita.`;
-      console.log(`postado: https://x.com/i/status/${await postarNoX(texto, chaves, { png, alt })}`);
-      estado.composicao = { cargo, quando: hoje };
-      await gravar();
-    } catch (e) {
-      console.error(`retrato falhou: ${e.message}`);
-    }
-  } else {
-    console.log(`Retrato: o último foi há ${faz} dia(s); espera ${DIAS_ENTRE_RETRATOS}.`);
-  }
+  if (faz < DIAS_ENTRE_RETRATOS) { console.log(`Retrato: o último foi há ${faz} dia(s); espera ${DIAS_ENTRE_RETRATOS}.`); return null; }
+  const cargo = RODIZIO[(RODIZIO.indexOf(estado.composicao.cargo) + 1) % RODIZIO.length];
+  const { cartaoDoGrupo } = await import('./imagens.mjs');
+  const { png, balanco: b, titulo } = cartaoDoGrupo(cargo);
+  return {
+    id: `retrato:${cargo}:${hoje}`, data: hoje, cargo,
+    texto: montar(`${titulo} hoje: ${b.dir}% de direita e ${b.esq}% de esquerda.`,
+      `Contagem de cabeças pela posição do partido, entre os ${b.conhecidos.toLocaleString('pt-BR')} com partido conhecido.`, `${SITE}#rede`),
+    imagem: {
+      png, arquivo: `${cargo}.png`,
+      alt: `Gráfico — ${titulo}: ${b.gente.length} pessoas ordenadas da esquerda (vermelho) para a direita (azul) pela posição do partido. ${b.esq}% de esquerda e ${b.dir}% de direita.`,
+    },
+  };
 }
 
-let falhas = 0;
-for (const item of fila.slice(0, MAX_POR_RODADA)) {
-  console.log(`--- ${item.id}\n${item.texto}\n`);
-  if (ensaio) continue;
-  try {
-    const id = await postarNoX(item.texto, chaves);
-    estado.postados.push(item.id);
-    if (item.resolve) delete estado.pendentes[item.resolve];
-    console.log(`postado: https://x.com/i/status/${id}\n`);
-  } catch (e) {
-    falhas++;
-    console.error(`FALHOU: ${e.message}\n`);
-    break;   // chave errada ou limite: não adianta insistir nos próximos
-  }
+const pauta = fila.slice(0, MAX_POR_RODADA);
+if (!pauta.length) {
+  console.log('Sem novidade hoje.');
+  const r = await retratoDoDia().catch((e) => { console.error(`retrato falhou: ${e.message}`); return null; });
+  if (r) pauta.push(r);
+} else if (fila.length > MAX_POR_RODADA) {
+  console.warn(`${fila.length} itens na fila; só os ${MAX_POR_RODADA} mais antigos vão nesta rodada.`);
 }
+
+const novos = (canal) => pauta.filter((p) => !(estado.feitos[canal] ?? []).includes(p.id));
+const marcar = (canal, item) => {
+  (estado.feitos[canal] ??= []).push(item.id);
+  if (item.resolve) delete estado.pendentes[item.resolve];
+  if (item.cargo) estado.composicao = { cargo: item.cargo, quando: hoje };
+};
+
+// ---------- relatório pra postar à mão ----------
+
+// Junta o texto e as imagens do dia num arquivo só, pra copiar e colar. É o
+// caminho de quem não paga a API: daqui não sai nada publicado.
+if (process.argv.includes('--relatorio')) {
+  const itens = novos('relatorio');
+  await mkdir(new URL('relatorios/', RAIZ), { recursive: true });
+  await mkdir(new URL('public/cartoes/', RAIZ), { recursive: true });
+  const linhas = [`# Pauta de ${dataBr(hoje)}`, ''];
+  if (!itens.length) {
+    linhas.push('Nada para postar hoje.', '', `Último retrato: ${estado.composicao.quando ?? '—'}. O próximo sai ${DIAS_ENTRE_RETRATOS} dias depois dele.`);
+  }
+  for (const [n, item] of itens.entries()) {
+    linhas.push(`## ${n + 1}. ${item.id.split(':')[0]}`, '', '~~~', item.texto, '~~~', '');
+    if (item.imagem) {
+      await writeFile(new URL(`public/cartoes/${item.imagem.arquivo}`, RAIZ), item.imagem.png);
+      linhas.push(`**Imagem:** ${SITE}cartoes/${item.imagem.arquivo}`, '',
+        `**Texto alternativo** (cole no campo de acessibilidade): ${item.imagem.alt}`, '');
+    }
+    marcar('relatorio', item);
+  }
+  linhas.push('---', '', 'Gerado por `npm run relatorio`. O que já apareceu aqui não volta em pautas futuras; as anteriores ficam em `relatorios/`.');
+  const texto = linhas.join('\n').replaceAll('~~~', '```') + '\n';
+  await writeFile(new URL(`relatorios/${hoje}.md`, RAIZ), texto);
+  await writeFile(new URL('PAUTA.md', RAIZ), texto);
+  await gravar();
+  console.log(texto);
+  console.log(`Gravado em relatorios/${hoje}.md e PAUTA.md`);
+  process.exit(0);
+}
+
+// ---------- publicação automática ----------
+
+let falhas = 0;
+
+// Bluesky: API aberta e de graça, então é o canal padrão.
+if (bluesky.temChaves()) {
+  try {
+    const sessao = await bluesky.entrar();
+    for (const item of novos('bsky')) {
+      console.log(`--- ${item.id}\n${item.texto}\n`);
+      const url = await bluesky.postar(item.texto, sessao, item.imagem ?? null);
+      marcar('bsky', item);
+      console.log(`Bluesky: ${url}\n`);
+    }
+  } catch (e) { falhas++; console.error(`Bluesky falhou: ${e.message}\n`); }
+} else {
+  console.log('Sem BSKY_USUARIO/BSKY_SENHA: Bluesky fora.');
+}
+
+// X: só sai se a conta de API tiver crédito; sem chaves, fica em ensaio.
+if (!ensaio) {
+  for (const item of novos('x')) {
+    try {
+      const id = await postarNoX(item.texto, chaves, item.imagem ?? null);
+      marcar('x', item);
+      console.log(`X: https://x.com/i/status/${id}\n`);
+    } catch (e) {
+      falhas++;
+      console.error(`X falhou: ${e.message}\n`);
+      break;   // crédito ou chave: não adianta insistir nos próximos
+    }
+  }
+} else {
+  for (const item of pauta) console.log(`--- ${item.id}\n${item.texto}\n`);
+}
+
 await gravar();
 if (falhas) process.exit(1);

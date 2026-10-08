@@ -53,12 +53,19 @@ jobs:
           X_API_SECRET: ${{ secrets.X_API_SECRET }}
           X_ACCESS_TOKEN: ${{ secrets.X_ACCESS_TOKEN }}
           X_ACCESS_SECRET: ${{ secrets.X_ACCESS_SECRET }}
+          BSKY_USUARIO: ${{ secrets.BSKY_USUARIO }}
+          BSKY_SENHA: ${{ secrets.BSKY_SENHA }}
+          SITE_URL: ${{ steps.pages.outputs.base_url }}/
+      # A pauta do dia, pra postar à mão onde não há API de graça.
+      - run: npm run relatorio
+        continue-on-error: true
+        env:
           SITE_URL: ${{ steps.pages.outputs.base_url }}/
       - name: Guardar dados novos
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add public/data data/postados.json
+          git add public/data data/postados.json relatorios PAUTA.md public/cartoes
           git diff --cached --quiet || git commit -m "chore: atualiza dados"
           git push
       - run: npm run build

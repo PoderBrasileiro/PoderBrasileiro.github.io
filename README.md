@@ -60,6 +60,21 @@ de uma tabela da Wikipédia, e se o formato dela mudar o parser quebra.
   Erra (homônimo, simples citação) e não afirma nada sobre ninguém. O aviso na
   ficha não é enfeite: não tire.
 
+## Postagem
+
+```bash
+npm run relatorio   # junta a pauta do dia em PAUTA.md, pra copiar e colar
+npm run postar      # publica sozinho, onde houver chave
+```
+
+O Bluesky tem API aberta: basta `BSKY_USUARIO` e `BSKY_SENHA` (uma senha de
+aplicativo, nunca a da conta) nos segredos do repositório. O X cobra por
+crédito e devolve 402 sem saldo — por isso existe a pauta, que não publica
+nada e deixa tudo pronto pra postar à mão.
+
+Cada canal tem a própria lista de itens já feitos, então o mesmo post pode
+sair no Bluesky, no X e na pauta sem repetir dentro de cada um.
+
 ## Contador de quem está vendo (opcional)
 
 O site é estático e não sabe contar ninguém: isso precisa de um servidor. O
