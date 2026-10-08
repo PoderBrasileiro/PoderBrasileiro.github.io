@@ -105,7 +105,8 @@ const hoje = brasil.geradoEm.slice(0, 10);
 const urls = [SITE, ...brasil.pessoas.map((p) => `${SITE}p/${p.id}.html`)];
 await writeFile(new URL('sitemap.xml', DIST),
   `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.map((u) => `<url><loc>${esc(u)}</loc><lastmod>${hoje}</lastmod></url>`).join('\n')}\n</urlset>\n`);
-await writeFile(new URL('robots.txt', DIST), `User-agent: *\nAllow: /\n\nSitemap: ${SITE}sitemap.xml\n`);
+// A pauta é ferramenta de bastidor, não conteúdo do site: fica fora da busca.
+await writeFile(new URL('robots.txt', DIST), `User-agent: *\nAllow: /\nDisallow: /pauta/\n\nSitemap: ${SITE}sitemap.xml\n`);
 
 // A home é escrita pelo Vite, que não conhece o endereço público: as tags de
 // compartilhamento precisam de URL absoluta, então entram aqui.

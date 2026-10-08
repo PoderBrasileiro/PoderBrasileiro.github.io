@@ -140,7 +140,7 @@ export function cartaoFuturo(cargo) {
 
 // ---------- cartão do site ----------
 
-function cartaoSite() {
+export function cartaoSite() {
   const L = 1200, A = 630;
   const b = balanco('senador');
   const lugares = assentos(b.gente.length, 4);

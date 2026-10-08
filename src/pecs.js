@@ -1,7 +1,7 @@
 // Aba de PECs: lista das propostas de emenda à Constituição com o estágio em
 // cada casa e o placar da votação nominal mais recente.
 
-import { h, trocar, fmtData } from './comum.js';
+import { h, trocar, fmtData, semAcento } from './comum.js';
 import { ETAPAS, etapaDe } from './etapas.js';
 export { ETAPAS, etapaDe };
 
@@ -54,14 +54,23 @@ export function criarPecs(raiz, dados, { aoEscolherPec }) {
   const legenda = h('div', { class: 'pecs-legenda' },
     Object.entries(ETAPAS).sort((a, b) => a[1].ordem - b[1].ordem).map(([k, v]) =>
       h('span', { class: 'selo selo-etapa', 'data-etapa': k, title: v.explica }, h('i', { 'aria-hidden': 'true' }, v.icone), v.rotulo)));
-  raiz.append(aviso, legenda, filtro, lista);
+  // Busca no número, na ementa e na situação: achar "saúde" ou "14/2021".
+  const busca = h('input', { type: 'search', class: 'filtro', placeholder: 'Buscar por número ou assunto…', 'aria-label': 'Buscar PEC' });
+  raiz.append(aviso, legenda, h('div', { class: 'pecs-controles' }, busca, filtro), lista);
 
   function desenhar() {
     const d = dados.pecs;
     if (d === undefined) return;
     if (!d) { aviso.textContent = 'Dados de PECs indisponíveis. Rode "npm run pecs".'; filtro.hidden = true; return; }
     aviso.textContent = `PECs com movimento desde ${fmtData(d.de)}, pelos dados abertos da Câmara e do Senado. A mesma proposta aparece uma vez por casa.`;
-    const visiveis = d.pecs.filter((p) => !soNominais.checked || p.votacoes.length);
+    const termos = semAcento(busca.value).split(/s+/).filter(Boolean);
+    const visiveis = d.pecs.filter((p) => {
+      if (soNominais.checked && !p.votacoes.length) return false;
+      if (!termos.length) return true;
+      const texto = semAcento([p.titulo, p.ementa, p.casa, estagioCurto(p), ETAPAS[etapaDe(p)].rotulo].join(' '));
+      return termos.every((t) => texto.includes(t));
+    });
+    if (!visiveis.length) return trocar(lista, h('p', { class: 'fraco' }, 'Nenhuma PEC encontrada.'));
     trocar(lista, visiveis.map((p) => {
       const v = p.votacoes[0];
       return h('button', { class: 'pec', 'data-pec': p.id, 'data-etapa': etapaDe(p), onclick: () => aoEscolherPec(p.id) },
@@ -74,6 +83,7 @@ export function criarPecs(raiz, dados, { aoEscolherPec }) {
     }));
   }
   soNominais.addEventListener('change', desenhar);
+  busca.addEventListener('input', desenhar);
 
   return {
     atualizar: desenhar,

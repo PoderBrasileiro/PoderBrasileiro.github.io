@@ -18,6 +18,7 @@ import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { createHmac, randomBytes } from 'node:crypto';
 import { ETAPAS, etapaDe } from '../src/etapas.js';
 import * as bluesky from './bluesky.mjs';
+import { paginaDoCartao, paginaDaPauta } from './pauta.mjs';
 
 const RAIZ = new URL('..', import.meta.url);
 const ESTADO = 'data/postados.json';
@@ -277,7 +278,9 @@ async function retratoDoDia() {
       `Contagem de cabeças pela posição do partido, entre os ${b.conhecidos.toLocaleString('pt-BR')} com partido conhecido.`, `${SITE}#rede`,
       TAG_GRUPO[cargo]),
     imagem: {
-      png, arquivo: `${cargo}.png`,
+      png, arquivo: `${cargo}.png`, destino: '#rede',
+      titulo: `${titulo} hoje`,
+      descricao: `${b.dir}% de direita e ${b.esq}% de esquerda, entre os ${b.conhecidos.toLocaleString('pt-BR')} com partido conhecido.`,
       alt: `Gráfico — ${titulo}: ${b.gente.length} pessoas ordenadas da esquerda (vermelho) para a direita (azul) pela posição do partido. ${b.esq}% de esquerda e ${b.dir}% de direita.`,
     },
   };
@@ -286,17 +289,22 @@ async function retratoDoDia() {
 // Os quatro posts de estreia, feitos uma vez só. Entram na pauta como
 // qualquer outro item, pra sair pelo mesmo caminho.
 async function postsDeEstreia() {
-  const { cartaoFuturo, cartaoContagem, cartaoDoGrupo } = await import('./imagens.mjs');
+  const { cartaoFuturo, cartaoContagem, cartaoSite } = await import('./imagens.mjs');
   const itens = [];
 
   // 1. O fixado: o que é o site.
-  const capa = cartaoDoGrupo('senador');
+  const capa = cartaoSite();
   itens.push({
     id: 'estreia:fixado', data: hoje, fixar: true,
     texto: montar('Quem ocupa o poder no Brasil, num quadro só: presidente, ministros, STF, governadores, senadores, deputados e os prefeitos das 5.569 cidades.',
       'Dados públicos, atualizados todo dia. Sem vínculo com governo ou partido.',
       SITE, ['#Brasil', '#Congresso']),
-    imagem: { png: capa.png, arquivo: 'estreia-capa.png', alt: `Gráfico do Senado Federal: 81 cadeiras em semicírculo, uma por senador, da esquerda (vermelho) para a direita (azul) pela posição do partido.` },
+    imagem: {
+      png: capa, arquivo: 'poderbr.png', destino: '',
+      titulo: 'Quem ocupa o poder no Brasil',
+      descricao: 'Presidente, ministros, STF, governadores, senadores, deputados e os prefeitos das 5.569 cidades, num quadro só.',
+      alt: 'Cartão do PoderBR: o título “Quem ocupa o poder no Brasil” sobre o semicírculo do Senado, com 81 cadeiras da esquerda (vermelho) para a direita (azul).',
+    },
   });
 
   // 2 e 3. Como cada casa fica depois da posse.
@@ -311,7 +319,12 @@ async function postsDeEstreia() {
       texto: montar(`${f.titulo}: ${f.balanco.dir}% de direita e ${f.balanco.esq}% de esquerda a partir de fevereiro de 2027.`,
         `${mudou} ${cargo === 'senador' ? 'São 54 eleitos em 2026 mais 27 com mandato até 2031.' : 'Os 513 trocam de uma vez.'} Cadeira por cadeira:`,
         `${SITE}#rede`, cargo === 'senador' ? ['#Senado', '#Eleições2026'] : ['#Câmara', '#Eleições2026']),
-      imagem: { png: f.png, arquivo: `2027-${cargo}.png`, alt: `Gráfico — ${f.titulo}: ${f.balanco.gente.length} cadeiras em semicírculo, da esquerda (vermelho) para a direita (azul) pela posição do partido. ${f.balanco.esq}% de esquerda e ${f.balanco.dir}% de direita.` },
+      imagem: {
+        png: f.png, arquivo: `2027-${cargo}.png`, destino: '#rede',
+        titulo: f.titulo,
+        descricao: `${f.balanco.dir}% de direita e ${f.balanco.esq}% de esquerda a partir de fevereiro de 2027. Hoje: ${f.hoje.dir}% e ${f.hoje.esq}%.`,
+        alt: `Gráfico — ${f.titulo}: ${f.balanco.gente.length} cadeiras em semicírculo, da esquerda (vermelho) para a direita (azul) pela posição do partido. ${f.balanco.esq}% de esquerda e ${f.balanco.dir}% de direita.`,
+      },
     });
   }
 
@@ -323,7 +336,12 @@ async function postsDeEstreia() {
       texto: montar(`Faltam ${c.dias} dias para o 2º turno, em ${c.quando}.`,
         `${c.candidatos.map((x) => `${x.nome} (${x.partido}) ${x.pct}%`).join(' e ')} no 1º turno. No site dá pra ver quem fica e quem sai do poder em 2027, estado por estado:`,
         `${SITE}#rede`, ['#Eleições2026', '#SegundoTurno']),
-      imagem: { png: c.png, arquivo: 'contagem.png', alt: `Cartão: faltam ${c.dias} dias para o 2º turno, em ${c.quando}. ${c.candidatos.map((x) => `${x.nome} do ${x.partido} teve ${x.pct}%`).join(' e ')} no 1º turno.` },
+      imagem: {
+        png: c.png, arquivo: 'contagem.png', destino: '#rede',
+        titulo: `Faltam ${c.dias} dias para o 2º turno`,
+        descricao: `${c.quando}, urnas das 8h às 17h. ${c.candidatos.map((x) => `${x.nome} (${x.partido}) ${x.pct}%`).join(' e ')} no 1º turno.`,
+        alt: `Cartão: faltam ${c.dias} dias para o 2º turno, em ${c.quando}. ${c.candidatos.map((x) => `${x.nome} do ${x.partido} teve ${x.pct}%`).join(' e ')} no 1º turno.`,
+      },
     });
   }
   return itens;
@@ -356,32 +374,46 @@ if (process.argv.includes('--relatorio')) {
   const itens = novos('relatorio');
   await mkdir(new URL('relatorios/', RAIZ), { recursive: true });
   await mkdir(new URL('public/cartoes/', RAIZ), { recursive: true });
-  const linhas = [
-    `# Pauta de ${dataBr(hoje)}`, '',
-    'Copie o bloco de texto, baixe a imagem pelo link e cole o texto alternativo no campo de acessibilidade do X.', '',
-  ];
-  if (!itens.length) {
-    linhas.push('Nada para postar hoje.', '', `Último retrato: ${estado.composicao.quando ?? '—'}. O próximo sai ${DIAS_ENTRE_RETRATOS} dias depois dele.`);
-  }
+
+  const TIPOS = { retrato: 'Retrato do dia', pec: 'Votação de PEC', etapa: 'PEC avançou', troca: 'Troca de cargo', '2turno': 'Resultado do 2º turno', estreia: 'Estreia' };
+  const paraPagina = [];
+  const linhas = [`# Pauta de ${dataBr(hoje)}`, '', `Mais fácil pela página: ${SITE}pauta/`, ''];
+  if (!itens.length) linhas.push('Nada para postar hoje.', '', `Último retrato: ${estado.composicao.quando ?? '—'}.`);
+
   for (const [n, item] of itens.entries()) {
-    const tipo = { retrato: 'Retrato do dia', pec: 'Votação de PEC', etapa: 'PEC avançou', troca: 'Troca de cargo', '2turno': 'Resultado do 2º turno', estreia: 'Estreia' }[item.id.split(':')[0]] ?? item.id.split(':')[0];
-    linhas.push(`## ${n + 1}. ${tipo}${item.fixar ? ' — fixe este no perfil' : ''}`, '', `${contarComoNoX(item.texto)} de 280 caracteres (o X conta todo link como 23)`, '', '~~~', item.texto, '~~~', '');
+    const tipo = TIPOS[item.id.split(':')[0]] ?? item.id.split(':')[0];
+    // O link do post vira o da página do cartão: a imagem entra pela prévia,
+    // sem ninguém precisar baixar e anexar nada.
     if (item.imagem) {
       await writeFile(new URL(`public/cartoes/${item.imagem.arquivo}`, RAIZ), item.imagem.png);
-      linhas.push(`**Imagem:** ${SITE}cartoes/${item.imagem.arquivo}` + ' — abra o link e salve a imagem.', '',
-        '**Texto alternativo**, pra colar no campo de acessibilidade:', '', '~~~', item.imagem.alt, '~~~', '');
+      const slug = item.imagem.arquivo.replace(/\.png$/, '');
+      const url = await paginaDoCartao({
+        slug,
+        titulo: item.imagem.titulo ?? tipo,
+        descricao: item.imagem.descricao ?? item.texto.split('\n')[0],
+        imagem: item.imagem.arquivo,
+        alt: item.imagem.alt,
+        destino: item.imagem.destino,
+      }, SITE);
+      item.texto = item.texto.replace(/https?:\/\/\S+/, url);
+      item.previa = item.imagem.arquivo;
     }
+    linhas.push(`## ${n + 1}. ${tipo}${item.fixar ? ' — fixe este no perfil' : ''}`, '',
+      `${contarComoNoX(item.texto)} de 280 caracteres (o X conta todo link como 23)`, '',
+      '~~~', item.texto, '~~~', '');
+    if (item.previa) linhas.push('A imagem entra sozinha pela prévia do link; não precisa anexar.', '');
+    paraPagina.push({ tipo, texto: item.texto, fixar: item.fixar, previa: item.previa, alt: item.imagem?.alt });
     marcar('relatorio', item);
   }
-  linhas.push('---', '',
-    'Gerado sozinho pelo workflow, todo dia. O que já apareceu aqui não volta em pautas futuras; as anteriores ficam em `relatorios/`.',
-    '', 'Para refazer a pauta de hoje com os itens que já saíram: `npm run relatorio -- --repetir`.');
+
+  linhas.push('---', '', 'Refeita sozinha todo dia. O que já apareceu aqui não volta em pautas futuras.');
   const texto = linhas.join('\n').replaceAll('~~~', '```') + '\n';
   await writeFile(new URL(`relatorios/${hoje}.md`, RAIZ), texto);
   await writeFile(new URL('PAUTA.md', RAIZ), texto);
+  const endereco = await paginaDaPauta(paraPagina, { site: SITE, data: dataBr(hoje), proximoRetrato: estado.composicao.quando ?? '—' });
   await gravar();
   console.log(texto);
-  console.log(`Gravado em relatorios/${hoje}.md e PAUTA.md`);
+  console.log(`Pauta em ${endereco} (e em relatorios/${hoje}.md)`);
   process.exit(0);
 }
 

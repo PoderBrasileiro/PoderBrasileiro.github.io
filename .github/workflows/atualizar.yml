@@ -65,7 +65,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add public/data data/postados.json relatorios PAUTA.md public/cartoes
+          git add public/data data/postados.json relatorios PAUTA.md public/cartoes public/c public/pauta
           git diff --cached --quiet || git commit -m "chore: atualiza dados"
           git push
       - run: npm run build
