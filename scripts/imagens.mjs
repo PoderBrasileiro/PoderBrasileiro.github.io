@@ -123,15 +123,41 @@ function cartaoSite() {
   return png(svg, L, A);
 }
 
+// ---------- banner do X ----------
+
+// 1500x500 é o tamanho que o X pede. Ele corta as bordas em telas estreitas e
+// cobre o canto inferior esquerdo com a foto de perfil, então o que importa
+// fica no meio e nada encosta nos cantos.
+function banner() {
+  const L = 1500, A = 500;
+  const b = balanco('senador');
+  const lugares = assentos(b.gente.length, 4);
+  const cx = L - 300, base = A - 84, raio = 262;
+  const bolas = b.gente.map((p, i) => {
+    const l = lugares[i];
+    return `<circle cx="${(cx + (l.x - 0.5) * 2 * raio).toFixed(1)}" cy="${(base - (1 - l.y) * raio).toFixed(1)}" r="8.5" fill="${corDaPosicao(posicaoDe(p))}"/>`;
+  }).join('');
+  const svg = [
+    `<rect width="${L}" height="${A}" fill="${COR.fundo}"/>`,
+    bolas,
+    marca(188, 170, 20),
+    txt(152, 268, 'PoderBR', { tam: 66, peso: 'bold' }),
+    txt(152, 316, 'Quem ocupa o poder no Brasil', { tam: 31, cor: COR.texto2 }),
+    txt(152, 360, 'Dados públicos, atualizados todo dia', { tam: 24, cor: COR.texto3 }),
+  ].join('');
+  return png(svg, L, A);
+}
+
 // ---------- principal ----------
 
 if (import.meta.url === `file://${process.argv[1].replace(/\\/g, '/')}` || process.argv[1]?.endsWith('imagens.mjs')) {
   await mkdir(new URL('marca/', RAIZ), { recursive: true });
   await writeFile(new URL('public/og.png', RAIZ), cartaoSite());
+  await writeFile(new URL('marca/banner-x.png', RAIZ), banner());
   for (const cargo of Object.keys(CASA)) {
     const { png: dados, balanco: b, titulo } = cartaoComposicao(cargo);
     await writeFile(new URL(`marca/${cargo === 'senador' ? 'senado' : 'camara'}.png`, RAIZ), dados);
     console.log(`${titulo}: ${b.esq}% esquerda, ${b.dir}% direita (de ${b.conhecidos} com partido conhecido) — ${(dados.length / 1024).toFixed(0)} KB`);
   }
-  console.log('public/og.png gravado.');
+  console.log('public/og.png e marca/banner-x.png gravados.');
 }

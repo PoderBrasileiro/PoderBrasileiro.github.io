@@ -1,0 +1,18 @@
+name = "poderbr-contador"
+main = "src/index.js"
+compatibility_date = "2026-06-01"
+
+# Quem pode chamar o /ping. Separe por vírgula pra incluir o endereço local
+# enquanto estiver testando.
+[vars]
+ORIGENS = "https://poderbrasileiro.github.io,http://localhost:5173"
+
+[[durable_objects.bindings]]
+name = "PRESENCA"
+class_name = "Presenca"
+
+# new_sqlite_classes é o que coloca o Durable Object no plano gratuito;
+# com new_classes ele exige plano pago.
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Presenca"]

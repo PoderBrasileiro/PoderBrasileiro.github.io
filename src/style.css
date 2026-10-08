@@ -421,3 +421,9 @@ span.votante { color: var(--texto-2); border-style: dashed; }
 .b-nome span, .q-indicacao h5 b { overflow-wrap: anywhere; min-width: 0; }
 .q-stf .b-nome-foto { align-items: flex-start; }
 .q-stf .b-nome-foto span { padding-top: 3px; }
+
+/* ---------- quem está vendo agora ---------- */
+.presenca { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--texto-2); }
+.presenca small { color: var(--texto-3); }
+.presenca-ponto { width: 8px; height: 8px; border-radius: 50%; background: #0ca30c; flex: none; animation: pulsar 2.4s ease-in-out infinite; }
+@keyframes pulsar { 50% { opacity: 0.35; } }

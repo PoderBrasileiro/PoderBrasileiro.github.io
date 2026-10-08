@@ -60,6 +60,26 @@ de uma tabela da Wikipédia, e se o formato dela mudar o parser quebra.
   Erra (homônimo, simples citação) e não afirma nada sobre ninguém. O aviso na
   ficha não é enfeite: não tire.
 
+## Contador de quem está vendo (opcional)
+
+O site é estático e não sabe contar ninguém: isso precisa de um servidor. O
+`worker/` é um Cloudflare Worker que faz só isso, no plano gratuito.
+
+```bash
+cd worker
+npx wrangler login
+npx wrangler deploy
+```
+
+O `deploy` imprime a URL (algo como
+`https://poderbr-contador.SEU-USUARIO.workers.dev`). Cole essa URL em
+`ENDERECO`, no começo de `src/presenca.js`. Com o campo vazio o bloco não
+aparece e o resto do site funciona igual.
+
+Cada aba manda um sinal a cada 25 segundos com um identificador sorteado na
+hora. Não grava cookie, não guarda IP e não liga uma visita à outra — o
+contador sabe quantas abas estão abertas, e nada além disso.
+
 ## Publicando
 
 `npm run build` gera `dist/`, que pode ir pra qualquer hospedagem estática.

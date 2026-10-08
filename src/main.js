@@ -4,6 +4,7 @@ import { criarRede } from './rede.js';
 import { criarPainel } from './painel.js';
 import { criarPecs } from './pecs.js';
 import { criarContagem } from './contagem.js';
+import { criarPresenca } from './presenca.js';
 
 const base = import.meta.env.BASE_URL;
 const carregar = (nome) => fetch(`${base}data/${nome}`).then((r) => (r.ok ? r.json() : Promise.reject(new Error(`${nome}: HTTP ${r.status}`))));
@@ -52,6 +53,7 @@ const mapa = criarMapa(document.getElementById('vis-mapa'), dados, acoes);
 const rede = criarRede(document.getElementById('vis-rede'), dados, acoes);
 const painel = criarPainel(document.getElementById('painel'), dados, acoes);
 criarContagem(document.getElementById('contagem'), dados);
+criarPresenca(document.getElementById('presenca'));
 const abaPecs = criarPecs(document.getElementById('vis-pecs'), dados, acoes);
 
 let selecaoAtual = {};
