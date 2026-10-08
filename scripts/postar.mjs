@@ -79,7 +79,7 @@ function novidades(pecs, eleicao, estado) {
 const pct = (s) => encodeURIComponent(s).replace(/[!'()*]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`);
 
 // Assina e chama a API. Sem `corpo` é um GET (usado só pra conferir as chaves).
-async function chamarX(url, chaves, corpo = null) {
+async function chamarX(url, chaves, corpo = null, tipo = 'application/json') {
   const oauth = {
     oauth_consumer_key: chaves.key, oauth_token: chaves.token,
     oauth_nonce: randomBytes(16).toString('hex'), oauth_timestamp: String(Math.floor(Date.now() / 1000)),
@@ -91,14 +91,34 @@ async function chamarX(url, chaves, corpo = null) {
   oauth.oauth_signature = createHmac('sha1', `${pct(chaves.secret)}&${pct(chaves.tokenSecret)}`).update(base).digest('base64');
   const r = await fetch(url, {
     method: metodo,
-    headers: { ...(corpo ? { 'Content-Type': 'application/json' } : {}), Authorization: `OAuth ${Object.keys(oauth).sort().map((k) => `${pct(k)}="${pct(oauth[k])}"`).join(', ')}` },
-    ...(corpo ? { body: JSON.stringify(corpo) } : {}),
+    headers: { ...(corpo ? { 'Content-Type': tipo } : {}), Authorization: `OAuth ${Object.keys(oauth).sort().map((k) => `${pct(k)}="${pct(oauth[k])}"`).join(', ')}` },
+    ...(corpo ? { body: Buffer.isBuffer(corpo) ? corpo : JSON.stringify(corpo) } : {}),
   });
   if (!r.ok) throw new Error(`X respondeu ${r.status}: ${(await r.text()).slice(0, 300)}`);
   return (await r.json()).data;
 }
 
-const postarNoX = async (texto, chaves) => (await chamarX('https://api.x.com/2/tweets', chaves, { text: texto }))?.id;
+// Sobe uma imagem e devolve o media_id. O endpoint de mídia é o v1.1 (o v2
+// não cobre isso) e o corpo multipart não entra na assinatura, como o JSON.
+async function subirImagem(png, chaves, descricao) {
+  const limite = '----poderbr' + Math.random().toString(36).slice(2);
+  const cabeca = Buffer.from(`--${limite}\r\nContent-Disposition: form-data; name="media"; filename="card.png"\r\nContent-Type: image/png\r\n\r\n`);
+  const corpo = Buffer.concat([cabeca, png, Buffer.from(`\r\n--${limite}--\r\n`)]);
+  const r = await chamarX('https://upload.twitter.com/1.1/media/upload.json', chaves, corpo, `multipart/form-data; boundary=${limite}`);
+  const id = r?.media_id_string;
+  // Texto alternativo: sem ele a imagem não diz nada a quem usa leitor de tela.
+  if (id && descricao) {
+    await chamarX('https://upload.twitter.com/1.1/media/metadata/create.json', chaves,
+      { media_id: id, alt_text: { text: descricao.slice(0, 1000) } }).catch((e) => console.warn(`  alt_text: ${e.message}`));
+  }
+  return id;
+}
+
+async function postarNoX(texto, chaves, imagem = null) {
+  const media = imagem ? await subirImagem(imagem.png, chaves, imagem.alt) : null;
+  const corpo = { text: texto, ...(media ? { media: { media_ids: [media] } } : {}) };
+  return (await chamarX('https://api.x.com/2/tweets', chaves, corpo))?.id;
+}
 
 // ---------- principal ----------
 
@@ -127,13 +147,39 @@ if (process.argv.includes('--verificar')) {
   process.exit(0);
 }
 
+// Cartão da composição de uma casa, com a imagem do plenário.
+async function cartao(cargo) {
+  const { cartaoComposicao } = await import('./imagens.mjs');
+  const { png, balanco: b, titulo } = cartaoComposicao(cargo);
+  return {
+    png,
+    alt: `Gráfico do ${titulo}: ${b.gente.length} cadeiras em semicírculo, uma por parlamentar, coloridas da esquerda (vermelho) para a direita (azul) conforme a posição do partido. ${b.esq}% de esquerda e ${b.dir}% de direita entre os ${b.conhecidos} com partido conhecido.`,
+    balanco: b, titulo,
+  };
+}
+
 // Post de estreia, uma vez só.
 if (process.argv.includes('--apresentacao')) {
+  const img = await cartao('senador');
   const texto = montar('Este perfil publica, de forma automática, o que o Congresso vota e o que a eleição muda no poder — a partir de dados públicos da Câmara, do Senado e do TSE.',
     'Mapa dos 5.569 municípios, os três poderes e a transição para 2027:', SITE);
   console.log(texto + '\n');
   if (ensaio) process.exit(0);
-  console.log(`postado: https://x.com/i/status/${await postarNoX(texto, chaves)}`);
+  console.log(`postado: https://x.com/i/status/${await postarNoX(texto, chaves, img)}`);
+  process.exit(0);
+}
+
+// Composição de uma casa hoje, com o gráfico do plenário.
+if (process.argv.some((a) => a.startsWith('--composicao'))) {
+  const cargo = process.argv.includes('--composicao-camara') ? 'deputado' : 'senador';
+  const img = await cartao(cargo);
+  const b = img.balanco;
+  const texto = montar(`${img.titulo} hoje: ${b.dir}% de direita e ${b.esq}% de esquerda${b.centro ? `, ${b.centro}% no centro` : ''}.`,
+    `Contagem de cabeças pela posição do partido de cada um dos ${b.gente.length}, segundo classificação de cientistas políticos. Quem é quem, cadeira por cadeira:`,
+    `${SITE}#rede`);
+  console.log(texto + '\n');
+  if (ensaio) process.exit(0);
+  console.log(`postado: https://x.com/i/status/${await postarNoX(texto, chaves, img)}`);
   process.exit(0);
 }
 if (!fila.length) console.log('Nada novo pra postar.');

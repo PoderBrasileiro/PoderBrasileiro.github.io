@@ -6,32 +6,11 @@
 // num círculo, sem dizer quem era de qual poder. O quadro responde isso de
 // cara, e as células sem dados dizem o que o site NÃO cobre.
 
+import * as d3 from 'd3';
+import { assentos } from './assentos.js';
 import { h, CARGOS, SITUACOES, destinoDe, posicaoDe, mostrarDica, esconderDica, textoPartido, ondeAtua } from './comum.js';
 
 const DIAMETRO = { presidente: 30, vice: 24, ministro: 16, governador: 20, senador: 14, deputado: 10, stf: 20 };
-
-// Assentos de um plenário em semicírculo, como os infográficos de jornal.
-// Devolve pontos em fração da caixa (x de 0 a 1, y de 0 a 1, com a base
-// embaixo), já ordenados da esquerda para a direita de quem olha.
-function assentos(n, linhas) {
-  const DENTRO = 0.52;   // o vão central é o que dá a forma de ferradura
-  const raios = Array.from({ length: linhas }, (_, i) => DENTRO + (1 - DENTRO) * (i / (linhas - 1)));
-  const soma = raios.reduce((a, b) => a + b, 0);
-  // Linha de fora comporta mais gente: cadeiras proporcionais ao raio.
-  const porLinha = raios.map((r) => Math.max(1, Math.round((n * r) / soma)));
-  let resto = n - porLinha.reduce((a, b) => a + b, 0);
-  for (let i = linhas - 1, voltas = 0; resto !== 0 && voltas < n + linhas; i = (i - 1 + linhas) % linhas, voltas++) {
-    if (resto > 0) { porLinha[i]++; resto--; } else if (porLinha[i] > 1) { porLinha[i]--; resto++; }
-  }
-  const pontos = [];
-  raios.forEach((r, i) => {
-    for (let j = 0; j < porLinha[i]; j++) {
-      const ang = Math.PI * (1 - (j + 0.5) / porLinha[i]);
-      pontos.push({ ang, x: 0.5 + 0.5 * r * Math.cos(ang), y: 1 - r * Math.sin(ang) });
-    }
-  });
-  return pontos.sort((a, b) => b.ang - a.ang);
-}
 
 export function criarRede(raiz, dados, { aoEscolherPessoa, aoVerMapa }) {
   const bolinhas = [];   // { el, pessoa }
@@ -105,8 +84,31 @@ export function criarRede(raiz, dados, { aoEscolherPessoa, aoVerMapa }) {
         fora ? `, entre os ${pos.length} de ${pessoas.length} com partido conhecido` : ''));
   }
 
-  const grupo = (titulo, conteudo, nota, pessoas) => h('div', { class: 'q-grupo' },
-    h('h4', {}, titulo), conteudo, pessoas ? balanco(pessoas) : null, nota ? h('p', { class: 'q-nota' }, nota) : null);
+  // Como a composição do grupo andou desde que o site começou a guardar. Só
+  // aparece com dias suficientes pra ter forma — com dois pontos uma linha
+  // não diz nada e sugere tendência onde não há.
+  function evolucao(cargo) {
+    const dias = (dados.historico?.dias ?? []).filter((d) => d.grupos?.[cargo]);
+    if (dias.length < 5) return null;
+    const L = 260, A = 44;
+    const frac = (d) => { const g = d.grupos[cargo]; const n = g.esq + g.centro + g.dir; return n ? g.dir / n : null; };
+    const pts = dias.map((d, i) => [(i / (dias.length - 1)) * L, frac(d)]).filter(([, y]) => y != null);
+    if (pts.length < 5) return null;
+    // Escala vertical fixa de 0 a 100%: esticar pra caber exageraria a oscilação.
+    const ultimo = pts[pts.length - 1][1];
+    const svg = d3.create('svg').attr('viewBox', `0 -3 ${L} ${A + 6}`).attr('preserveAspectRatio', 'none')
+      .attr('role', 'img')
+      .attr('aria-label', `Fatia de direita ao longo de ${dias.length} dias, de ${Math.round(pts[0][1] * 100)}% a ${Math.round(ultimo * 100)}%`);
+    svg.append('line').attr('class', 'q-meia').attr('x1', 0).attr('x2', L).attr('y1', A / 2).attr('y2', A / 2);
+    svg.append('path').attr('class', 'q-linha')
+      .attr('d', pts.map(([x, y], i) => `${i ? 'L' : 'M'}${x.toFixed(1)},${(A - y * A).toFixed(1)}`).join(' '));
+    return h('div', { class: 'q-evolucao' }, svg.node(),
+      h('p', { class: 'q-nota' }, `Fatia de direita em ${dias.length} dias de registro: ${Math.round(pts[0][1] * 100)}% → ${Math.round(ultimo * 100)}%`));
+  }
+
+  const grupo = (titulo, conteudo, nota, pessoas, cargo) => h('div', { class: 'q-grupo' },
+    h('h4', {}, titulo), conteudo, pessoas ? balanco(pessoas) : null,
+    cargo ? evolucao(cargo) : null, nota ? h('p', { class: 'q-nota' }, nota) : null);
   const nuvem = (cargo) => h('div', { class: 'q-nuvem' }, doCargo(cargo).map((p) => bolinha(p)));
 
   // Plenário em semicírculo: cada cadeira é uma pessoa, da esquerda para a
@@ -157,19 +159,26 @@ export function criarRede(raiz, dados, { aoEscolherPessoa, aoVerMapa }) {
         h('div', { class: 'q-ramo' },
           h('div', { class: 'q-no' }, comFoto(dados.pessoaPorId.get('vice'), `${dados.pessoaPorId.get('vice').nome} · vice`)),
           h('div', { class: 'q-no q-no-larga' },
-            grupo(`Ministros (${n('ministro')})`, nuvem('ministro'), 'nomeados e demitidos pelo presidente, sem passar pelo Congresso', doCargo('ministro')))))),
+            grupo(`Ministros (${n('ministro')})`, nuvem('ministro'), 'nomeados e demitidos pelo presidente, sem passar pelo Congresso', doCargo('ministro'), 'ministro'))))),
       celula(
-        grupo(`Senado (${n('senador')})`, plenario('senador', 4), '3 senadores por estado. Cada cadeira é uma pessoa, da esquerda para a direita.', doCargo('senador')),
-        grupo(`Câmara dos Deputados (${n('deputado')})`, plenario('deputado', 11), 'bancada proporcional à população do estado', doCargo('deputado'))),
+        grupo(`Senado (${n('senador')})`, plenario('senador', 4), '3 senadores por estado. Cada cadeira é uma pessoa, da esquerda para a direita.', doCargo('senador'), 'senador'),
+        grupo(`Câmara dos Deputados (${n('deputado')})`, plenario('deputado', 11), 'bancada proporcional à população do estado', doCargo('deputado'), 'deputado')),
       celula(
+        // Agrupado por quem indicou: é o que mostra a marca que cada governo
+        // deixou num tribunal com mandato vitalício.
         grupo(`Supremo Tribunal Federal (${stf.length} de 11)`,
-          h('div', { class: 'q-destaques q-stf' }, stf.map((p) => comFoto(p, p.funcao ? `${p.nome} · ${p.funcao}` : p.nome))),
-          'Ministros do STF não têm partido, então não entram na conta de esquerda e direita. São indicados pelo presidente e aprovados pelo Senado.'),
+          h('div', { class: 'q-indicacoes' },
+            d3.groups(stf, (p) => p.indicadoPor ?? 'Indicação não informada')
+              .sort((a, b) => b[1].length - a[1].length)
+              .map(([quem, gente]) => h('div', { class: 'q-indicacao' },
+                h('h5', {}, h('b', {}, quem), h('small', {}, `indicou ${gente.length} de ${stf.length}`)),
+                h('div', { class: 'q-destaques q-stf' }, gente.map((p) => comFoto(p, p.funcao ? `${p.nome} · ${p.funcao}` : p.nome)))))),
+          'Ministros do STF não têm partido, então não entram na conta de esquerda e direita. São indicados pelo presidente e aprovados pelo Senado, e ficam até os 75 anos.'),
         fora('Demais tribunais', 'STJ, TSE, TST, STM e a Justiça Federal não estão neste site.')),
 
       nivel('Estados', '26 estados e o DF'),
       celula(grupo(`Governadores (${n('governador')})`,
-        h('div', { class: 'q-destaques q-gov' }, doCargo('governador').map((p) => comNome(p, p.uf))), null, doCargo('governador'))),
+        h('div', { class: 'q-destaques q-gov' }, doCargo('governador').map((p) => comNome(p, p.uf))), null, doCargo('governador'), 'governador')),
       celula(fora('Assembleias legislativas', 'Deputados estaduais não estão neste site.')),
       celula(fora('Tribunais de Justiça', 'A Justiça estadual não está neste site.')),
 

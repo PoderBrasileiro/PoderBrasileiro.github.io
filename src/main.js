@@ -10,14 +10,15 @@ const carregar = (nome) => fetch(`${base}data/${nome}`).then((r) => (r.ok ? r.js
 
 let dados;
 try {
-  const [brasil, malha, noticias, eleicao] = await Promise.all([
+  const [brasil, malha, noticias, eleicao, historico] = await Promise.all([
     carregar('brasil.json'),
     carregar('malha.json'),
     carregar('noticias.json').catch(() => null),   // opcional: o site funciona sem
     carregar('eleicao2026.json').catch(() => null),
+    carregar('historico.json').catch(() => null),
   ]);
   dados = {
-    ...brasil, malha, noticias, eleicao,
+    ...brasil, malha, noticias, eleicao, historico,
     pessoaPorId: new Map(brasil.pessoas.map((p) => [p.id, p])),
     ufPorSigla: new Map(brasil.ufs.map((u) => [u.sigla, u])),
     governadorPorUf: new Map(brasil.pessoas.filter((p) => p.cargo === 'governador').map((p) => [p.uf, p])),
@@ -43,6 +44,7 @@ const acoes = {
   aoVerMinistros: () => selecionar({ ministros: true }),
   aoVerMapa: () => abrirAba('mapa'),
   aoEscolherPec: (pec) => selecionar({ pec }),
+  linkAtual: () => linkDe(selecaoAtual),
   carregarMalhaUf: (uf) => carregar(`malhas/${uf}.json`),
 };
 
@@ -53,7 +55,18 @@ criarContagem(document.getElementById('contagem'), dados);
 const abaPecs = criarPecs(document.getElementById('vis-pecs'), dados, acoes);
 
 let selecaoAtual = {};
-function selecionar(sel) {
+// Endereço do que está aberto, pra dar pra mandar o recorte pra alguém.
+// Formato: #aba, #p=id, #uf=MG, #pec=camara-123, #ministros.
+export function enderecoDe(sel = selecaoAtual) {
+  if (sel.pessoa) return `#p=${encodeURIComponent(sel.pessoa)}`;
+  if (sel.pec) return `#pec=${encodeURIComponent(sel.pec)}`;
+  if (sel.uf) return `#uf=${sel.uf}`;
+  if (sel.ministros) return '#ministros';
+  return `#${document.querySelector('.abas [aria-selected="true"]').dataset.aba}`;
+}
+const linkDe = (sel) => location.href.split('#')[0] + enderecoDe(sel);
+
+function selecionar(sel, mexerNoEndereco = true) {
   selecaoAtual = sel;
   mapa.selecionar(sel);
   rede.selecionar(sel);
@@ -63,6 +76,7 @@ function selecionar(sel) {
   else if (sel.ministros) painel.ministros();
   else if (sel.pec) painel.pec(sel.pec);
   else painel.resumo();
+  if (mexerNoEndereco) history.replaceState(null, '', enderecoDe(sel));
   // No celular o painel fica abaixo da visualização.
   if (matchMedia('(max-width: 900px)').matches) document.getElementById('painel').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
@@ -138,7 +152,9 @@ const redesenharLista = criarLista(document.getElementById('vis-lista'));
 function abrirAba(nome) {
   for (const b of document.querySelectorAll('.abas button')) b.setAttribute('aria-selected', String(b.dataset.aba === nome));
   for (const a of ['mapa', 'rede', 'lista', 'pecs']) document.getElementById(`vis-${a}`).hidden = a !== nome;
-  history.replaceState(null, '', `#${nome}`);
+  // Trocar de aba sem nada aberto volta o endereço pra aba; com algo aberto,
+  // o recorte continua valendo e o endereço fica como está.
+  if (enderecoDe().startsWith('#' + nome) || /^#(mapa|rede|lista|pecs)$/.test(location.hash)) history.replaceState(null, '', `#${nome}`);
   desenharLegenda();
 }
 for (const b of document.querySelectorAll('.abas button')) b.addEventListener('click', () => abrirAba(b.dataset.aba));
@@ -217,24 +233,35 @@ carregar('prefeitos.json').then((prefeitos) => {
   pintar();
   redesenharLista();
   rede.atualizarPrefeitos();
-  if (selecaoAtual.uf && !selecaoAtual.pessoa) painel.uf(selecaoAtual.uf);
+  if (location.hash.startsWith('#p=') && !selecaoAtual.pessoa) abrirEndereco();
+  else if (selecaoAtual.uf && !selecaoAtual.pessoa) painel.uf(selecaoAtual.uf);
 });
 
 let temaSalvo = null;
 try { temaSalvo = localStorage.getItem('tema'); } catch { /* modo privado */ }
 aplicarTema(temaSalvo === 'claro' || temaSalvo === 'escuro' ? temaSalvo : 'sistema');
 painel.resumo();
-const inicial = location.hash.slice(1);
-if (['rede', 'lista', 'pecs'].includes(inicial)) abrirAba(inicial);
-// Link direto pra ficha de alguém (#p=senador-123), usado pelas páginas
-// estáticas que os buscadores indexam. Prefeito só existe depois que
-// prefeitos.json carrega, então esse caso espera.
-const pessoaInicial = inicial.startsWith('p=') ? decodeURIComponent(inicial.slice(2)) : null;
-if (pessoaInicial && dados.pessoaPorId.has(pessoaInicial)) acoes.aoEscolherPessoa(pessoaInicial);
+// Abre o recorte que vier no endereço. Vale tanto pro link que alguém
+// compartilhou quanto pras páginas estáticas que os buscadores indexam.
+// Prefeito só existe depois que prefeitos.json carrega, e aí o caso é
+// retomado quando aquele arquivo chega.
+function abrirEndereco() {
+  const h = location.hash.slice(1);
+  if (['rede', 'lista', 'pecs', 'mapa'].includes(h)) return abrirAba(h);
+  const [chave, bruto] = h.split('=');
+  const valor = bruto && decodeURIComponent(bruto);
+  if (chave === 'p' && dados.pessoaPorId.has(valor)) return acoes.aoEscolherPessoa(valor);
+  if (chave === 'uf' && dados.ufPorSigla.has(valor)) return acoes.aoEscolherUf(valor);
+  if (chave === 'ministros') return acoes.aoVerMinistros();
+  if (chave === 'pec' && dados.pecs) { abrirAba('pecs'); return selecionar({ pec: valor }); }
+  return null;
+}
+abrirEndereco();
+addEventListener('hashchange', abrirEndereco);
 
 // ---------- PECs (carregadas depois, como os prefeitos) ----------
 
-carregar('pecs.json').then((pecs) => { dados.pecs = pecs; }).catch(() => { dados.pecs = null; }).finally(() => {
+carregar('pecs.json').then((pecs) => { dados.pecs = pecs; if (location.hash.startsWith('#pec=')) abrirEndereco(); }).catch(() => { dados.pecs = null; }).finally(() => {
   abaPecs.atualizar();
   if (selecaoAtual.pessoa) painel.pessoa(selecaoAtual.pessoa);
 });

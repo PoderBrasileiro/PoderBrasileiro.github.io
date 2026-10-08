@@ -171,7 +171,27 @@ function blocoNoticias(p, dados) {
   return sec;
 }
 
-export function criarPainel(raiz, dados, { aoEscolherPessoa, aoEscolherUf, aoVerMinistros, aoEscolherPec }) {
+export function criarPainel(raiz, dados, { aoEscolherPessoa, aoEscolherUf, aoVerMinistros, aoEscolherPec, linkAtual }) {
+  // Copia o endereço do que está aberto. O clipboard falha em http sem TLS e
+  // quando o usuário nega a permissão; nesses casos o link aparece pra copiar
+  // à mão, que é melhor que um botão que não faz nada.
+  function compartilhar() {
+    const botao = h('button', { class: 'compartilhar' }, '⧉ Copiar link');
+    botao.addEventListener('click', async () => {
+      const url = linkAtual();
+      try {
+        await navigator.clipboard.writeText(url);
+        botao.textContent = '✓ Link copiado';
+        setTimeout(() => { botao.textContent = '⧉ Copiar link'; }, 2500);
+      } catch {
+        const campo = h('input', { class: 'filtro', value: url, readonly: true, 'aria-label': 'Link para copiar' });
+        botao.replaceWith(campo);
+        campo.select();
+      }
+    });
+    return botao;
+  }
+
   const voltar = (rotulo, acao) => h('button', { class: 'voltar', onclick: acao }, `← ${rotulo}`);
 
   function blocoDeputados(lista) {
@@ -253,6 +273,7 @@ export function criarPainel(raiz, dados, { aoEscolherPessoa, aoEscolherUf, aoVer
       trocar(raiz, 
         h('p', { class: 'sobretitulo' }, `Região ${u.regiao}`),
         h('h2', {}, `${u.nome} (${u.sigla})`),
+        compartilhar(),
         h('h3', {}, 'Governo do estado'),
         gov.length ? gov.map((p) => cartao(p, dados, aoEscolherPessoa)) : h('p', { class: 'fraco' }, 'Não encontrado.'),
         h('h3', {}, `Senadores (${sen.length})`),
@@ -268,6 +289,7 @@ export function criarPainel(raiz, dados, { aoEscolherPessoa, aoEscolherUf, aoVer
       trocar(raiz, 
         h('p', { class: 'sobretitulo' }, 'Governo federal'),
         h('h2', {}, `Ministros (${lista.length})`),
+        compartilhar(),
         h('p', { class: 'fraco' }, `Fonte: página oficial do Planalto${dados.ministrosAtualizadoEm ? `, atualizada em ${dados.ministrosAtualizadoEm}` : ''}.`),
         lista.map((p) => cartao(p, dados, aoEscolherPessoa)));
     },
@@ -289,6 +311,7 @@ export function criarPainel(raiz, dados, { aoEscolherPessoa, aoEscolherUf, aoVer
         h('p', { class: 'sobretitulo' }, `Proposta de emenda à Constituição · ${p.casa}`),
         h('h2', {}, p.titulo),
         h('p', {}, p.ementa),
+        compartilhar(),
         h('div', { class: 'pec-etapa' }, trilha(p), seloPec(p), h('p', { class: 'fraco' }, ETAPAS[etapaDe(p)].explica)),
         h('section', {}, h('h3', {}, p.casa === 'Senado' ? 'Estágio no Senado' : 'Estágio na Câmara'),
           e.situacao ? h('p', {}, h('b', {}, e.situacao), e.orgao ? ` — ${e.orgao}` : '') : null,
@@ -334,6 +357,7 @@ export function criarPainel(raiz, dados, { aoEscolherPessoa, aoEscolherUf, aoVer
         p.cargo === 'prefeito' ? h('p', { class: 'aviso' },
           h('b', {}, 'Resultado da eleição de 2024. '),
           'É quem o TSE registra como eleito, e o partido pelo qual concorreu. Pode não ser quem está no cargo hoje (cassação, renúncia, eleição suplementar) nem o partido atual.') : null,
+        compartilhar(),
         blocoDestino(p, dados),
         blocoEspectro(p, dados),
         blocoVotos(p, dados),

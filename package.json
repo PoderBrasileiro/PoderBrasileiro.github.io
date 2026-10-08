@@ -12,12 +12,16 @@
     "prefeitos": "node scripts/prefeitos.mjs",
     "eleicao": "node scripts/eleicao2026.mjs",
     "pecs": "node scripts/pecs.mjs",
-    "postar": "node scripts/postar.mjs"
+    "postar": "node scripts/postar.mjs",
+    "imagens": "node scripts/imagens.mjs",
+    "historico": "node scripts/historico.mjs"
   },
   "dependencies": {
     "d3": "^7.9.0"
   },
   "devDependencies": {
+    "@resvg/resvg-js": "^2.6.2",
+    "dejavu-fonts-ttf": "^2.37.3",
     "vite": "^6.0.0"
   }
 }

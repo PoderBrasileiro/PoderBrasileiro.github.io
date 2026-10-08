@@ -37,6 +37,8 @@ jobs:
         continue-on-error: true
       - run: npm run eleicao
         continue-on-error: true
+      - run: npm run historico
+        continue-on-error: true
       - run: npm run pecs
         continue-on-error: true
       - run: npm run noticias

@@ -67,6 +67,8 @@ function pagina(p) {
 <meta property="og:title" content="${esc(titulo)}">
 <meta property="og:description" content="${esc(resumo)}">
 <meta property="og:url" content="${esc(url)}">
+<meta property="og:image" content="${esc(SITE)}og.png">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="../favicon.svg" type="image/svg+xml">
 <style>
 :root{color-scheme:light dark}
@@ -104,5 +106,16 @@ const urls = [SITE, ...brasil.pessoas.map((p) => `${SITE}p/${p.id}.html`)];
 await writeFile(new URL('sitemap.xml', DIST),
   `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.map((u) => `<url><loc>${esc(u)}</loc><lastmod>${hoje}</lastmod></url>`).join('\n')}\n</urlset>\n`);
 await writeFile(new URL('robots.txt', DIST), `User-agent: *\nAllow: /\n\nSitemap: ${SITE}sitemap.xml\n`);
+
+// A home é escrita pelo Vite, que não conhece o endereço público: as tags de
+// compartilhamento precisam de URL absoluta, então entram aqui.
+const home = new URL('index.html', DIST);
+let html = await readFile(home, 'utf8');
+if (!html.includes('og:image')) {
+  html = html
+    .replace('</head>', `  <meta property="og:url" content="${esc(SITE)}">\n  <meta property="og:image" content="${esc(SITE)}og.png">\n  <link rel="canonical" href="${esc(SITE)}">\n</head>`)
+    .replace('<meta name="twitter:card" content="summary">', '<meta name="twitter:card" content="summary_large_image">');
+  await writeFile(home, html);
+}
 
 console.log(`${brasil.pessoas.length} páginas, sitemap e robots em dist/ (site: ${SITE})`);
