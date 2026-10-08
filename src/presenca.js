@@ -8,7 +8,7 @@
 
 import { h, trocar } from './comum.js';
 
-const ENDERECO = '';            // ex.: https://poderbr-contador.SEU-USUARIO.workers.dev
+const ENDERECO = 'https://poderbr-contador.poderbrasileiro.workers.dev';
 const INTERVALO_MS = 25_000;
 
 const plural = (n) => (n === 1 ? '1 pessoa vendo agora' : `${n.toLocaleString('pt-BR')} pessoas vendo agora`);
