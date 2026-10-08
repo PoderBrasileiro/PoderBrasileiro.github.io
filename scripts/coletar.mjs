@@ -398,7 +398,18 @@ const votos = await coletarVotos(senadores);
 console.log('Governadores (Wikipédia)...');
 const governadores = await coletarGovernadores(ufs);
 console.log('Ministros (Wikipédia)...');
-const { ministros, atualizadoEm: ministrosAtualizadoEm } = await coletarMinistros();
+// O gov.br devolve 429 pros servidores do GitHub Actions (funciona de casa).
+// Sem isto a coleta inteira morria nos ministros e nada mais era atualizado;
+// agora os ministros ficam como estavam na última coleta boa e o resto segue.
+let ministros, ministrosAtualizadoEm;
+try {
+  ({ ministros, atualizadoEm: ministrosAtualizadoEm } = await coletarMinistros());
+} catch (e) {
+  const anterior = await lerJson('public/data/brasil.json').catch(() => null);
+  ministros = anterior?.pessoas.filter((p) => p.cargo === 'ministro') ?? [];
+  ministrosAtualizadoEm = anterior?.ministrosAtualizadoEm ?? null;
+  console.warn(`  Planalto indisponível (${e.message}): mantidos os ${ministros.length} ministros da coleta anterior.`);
+}
 console.log('Presidência...');
 const presidencia = await coletarPresidencia();
 console.log('Câmara dos Deputados...');
