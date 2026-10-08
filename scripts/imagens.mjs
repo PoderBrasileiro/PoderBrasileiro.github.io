@@ -125,25 +125,27 @@ function cartaoSite() {
 
 // ---------- banner do X ----------
 
-// 1500x500 é o tamanho que o X pede. Ele corta as bordas em telas estreitas e
-// cobre o canto inferior esquerdo com a foto de perfil, então o que importa
-// fica no meio e nada encosta nos cantos.
+// 1500x500 é o tamanho que o X pede. Ele corta as laterais em tela estreita e
+// cobre o canto inferior esquerdo com a foto de perfil, então a assinatura
+// fica no canto de cima e nada encosta nas bordas.
+//
+// O degradê é a própria régua do site: vermelho à esquerda, cinza no meio,
+// azul à direita. Invertê-lo brigaria com a legenda que o site usa em toda
+// página.
 function banner() {
   const L = 1500, A = 500;
-  const b = balanco('senador');
-  const lugares = assentos(b.gente.length, 4);
-  const cx = L - 300, base = A - 84, raio = 262;
-  const bolas = b.gente.map((p, i) => {
-    const l = lugares[i];
-    return `<circle cx="${(cx + (l.x - 0.5) * 2 * raio).toFixed(1)}" cy="${(base - (1 - l.y) * raio).toFixed(1)}" r="8.5" fill="${corDaPosicao(posicaoDe(p))}"/>`;
-  }).join('');
   const svg = [
-    `<rect width="${L}" height="${A}" fill="${COR.fundo}"/>`,
-    bolas,
-    marca(188, 170, 20),
-    txt(152, 268, 'PoderBR', { tam: 66, peso: 'bold' }),
-    txt(152, 316, 'Quem ocupa o poder no Brasil', { tam: 31, cor: COR.texto2 }),
-    txt(152, 360, 'Dados públicos, atualizados todo dia', { tam: 24, cor: COR.texto3 }),
+    `<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="${COR.esq}"/><stop offset="0.5" stop-color="${COR.fundo2}"/><stop offset="1" stop-color="${COR.dir}"/>
+    </linearGradient>
+    <filter id="sombra" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="2" stdDeviation="9" flood-color="#000" flood-opacity="0.55"/>
+    </filter></defs>`,
+    `<rect width="${L}" height="${A}" fill="url(#g)"/>`,
+    `<g filter="url(#sombra)">${marca(L - 362, 92, 17)}`,
+    txt(L - 60, 104, 'PoderBR', { tam: 50, peso: 'bold', ancora: 'end' }),
+    '</g>',
+    `<g filter="url(#sombra)">${txt(L - 60, 150, 'poderbrasileiro.github.io', { tam: 22, cor: '#ffffff', ancora: 'end' })}</g>`,
   ].join('');
   return png(svg, L, A);
 }
