@@ -45,6 +45,20 @@ export function escalaEspectro() {
     .clamp(true);
 }
 
+// As cinco faixas do espectro. Os cortes são escolha deste site, não do
+// artigo: ele dá uma nota de 0 a 10 por partido e não divide em faixas. Foram
+// postos onde a distribuição real tem folga — não há partido com gente em
+// cargo entre 5,3 e 6,3, por exemplo —, e não em quintos iguais da régua.
+export const FAIXAS = [
+  { chave: 'esquerda', rotulo: 'Esquerda', ate: 3 },
+  { chave: 'centro-esquerda', rotulo: 'Centro-esquerda', ate: 4.5 },
+  { chave: 'centro', rotulo: 'Centro', ate: 5.5 },
+  { chave: 'centro-direita', rotulo: 'Centro-direita', ate: 7 },
+  { chave: 'direita', rotulo: 'Direita', ate: Infinity },
+];
+
+export const faixaDe = (posicao) => (posicao == null ? null : FAIXAS.find((f) => posicao < f.ate));
+
 export function posicaoDe(pessoa, dados) {
   return pessoa.partido ? dados.partidos[pessoa.partido]?.posicao ?? null : null;
 }

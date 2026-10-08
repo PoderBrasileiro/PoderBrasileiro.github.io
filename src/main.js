@@ -204,6 +204,8 @@ document.getElementById('metodologia').append(
   h('ul', {},
     h('li', {}, h('b', {}, 'Posição do partido: '), dados.fontePartidos, ' A porcentagem é só essa nota convertida (nota 7 = 70% direita). Vale para o partido inteiro, não para a pessoa. Nas cores, o vermelho e o azul cheios aparecem a partir de 2 e de 8: no intervalo todo, como nenhum partido com gente em cargo chega perto das pontas, tudo sairia cinzento.'),
     h('li', {}, h('b', {}, 'Voto no plenário (só senadores): '), `nas votações nominais em que a maioria do ${dados.votos.poloEsquerda} e a maioria do ${dados.votos.poloDireita} ficaram em lados opostos, de que lado o senador votou. Mede alinhamento de voto, não ideologia.`)),
+  h('h4', {}, 'As cinco faixas'),
+  h('p', {}, 'Esquerda até 3, centro-esquerda até 4,5, centro até 5,5, centro-direita até 7, direita acima disso. Os cortes são escolha deste site: o artigo dá uma nota por partido e não divide em faixas. Foram postos onde a distribuição real tem folga — não existe partido com gente em cargo entre 5,3 e 6,3 —, e não em quintos iguais da régua. Nos posts a conta é só de dois lados, abaixo ou acima de 5.'),
   h('h4', {}, 'Porcentagem de esquerda e direita'),
   h('p', {}, 'Em cada grupo, conta quantas pessoas são de partido com nota abaixo de 5 (esquerda), acima de 5 (direita) ou exatamente no meio. A porcentagem é sobre quem tem partido conhecido, e a parte hachurada da barra mostra de quanta gente não se sabe — nos ministros isso é a maioria. É contagem de cabeças pela posição do partido, não medida de força política: um partido grande e um pequeno pesam igual.'),
   h('h4', {}, 'Investigações e notícias'),

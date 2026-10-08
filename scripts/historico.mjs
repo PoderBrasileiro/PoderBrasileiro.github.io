@@ -42,6 +42,18 @@ for (const cargo of CARGOS) {
       .sort((a, b) => b[1] - a[1]));
 }
 
+// Quem ocupa cada cargo de cima. É o que permite, no dia seguinte, saber que
+// alguém trocou — e é por isso que ficam o nome e o partido, não só a conta.
+const quem = (p) => ({ id: p.id, nome: p.nome, partido: p.partido ?? null });
+const porChave = (cargo, chave) => Object.fromEntries(
+  brasil.pessoas.filter((p) => p.cargo === cargo && p[chave]).map((p) => [p[chave], quem(p)]));
+registro.cargos = {
+  presidente: quem(brasil.pessoas.find((p) => p.cargo === 'presidente')),
+  vice: quem(brasil.pessoas.find((p) => p.cargo === 'vice')),
+  ministros: porChave('ministro', 'pasta'),
+  governadores: porChave('governador', 'uf'),
+};
+
 const anterior = await ler('historico.json', { dias: [] });
 // Um registro por dia: rodar duas vezes no mesmo dia só atualiza o do dia.
 const dias = [...anterior.dias.filter((d) => d.data !== hoje), registro]

@@ -8,7 +8,7 @@
 
 import * as d3 from 'd3';
 import { assentos } from './assentos.js';
-import { h, CARGOS, SITUACOES, destinoDe, posicaoDe, mostrarDica, esconderDica, textoPartido, ondeAtua } from './comum.js';
+import { h, CARGOS, SITUACOES, FAIXAS, faixaDe, destinoDe, posicaoDe, mostrarDica, esconderDica, textoPartido, ondeAtua } from './comum.js';
 
 const DIAMETRO = { presidente: 30, vice: 24, ministro: 16, governador: 20, senador: 14, deputado: 10, stf: 20 };
 
@@ -36,7 +36,8 @@ export function criarRede(raiz, dados, { aoEscolherPessoa, aoVerMapa }) {
   }
 
   // Bolinha com nome embaixo, pros poucos cargos em que cabe.
-  const comNome = (p, rotulo) => h('div', { class: 'b-nome' }, bolinha(p), h('span', {}, rotulo ?? p.nome));
+  let ordemNome = 0;
+  const comNome = (p, rotulo) => h('div', { class: 'b-nome', style: `--i:${ordemNome++ % 14}` }, bolinha(p), h('span', {}, rotulo ?? p.nome));
 
   // Com retrato, pros cargos em que são poucas pessoas e vale reconhecer a
   // cara. A foto que não carrega simplesmente sai e deixam-se as iniciais.
@@ -51,7 +52,7 @@ export function criarRede(raiz, dados, { aoEscolherPessoa, aoVerMapa }) {
     const alvo = bolinha(p);
     alvo.classList.add('b-foto');
     alvo.append(caixa);
-    return h('div', { class: 'b-nome b-nome-foto' }, alvo, h('span', {}, rotulo ?? p.nome));
+    return h('div', { class: 'b-nome b-nome-foto', style: `--i:${ordemNome++ % 14}` }, alvo, h('span', {}, rotulo ?? p.nome));
   }
 
   const doCargo = (cargo) => dados.pessoas.filter((p) => p.cargo === cargo)
@@ -63,24 +64,19 @@ export function criarRede(raiz, dados, { aoEscolherPessoa, aoVerMapa }) {
   function balanco(pessoas) {
     const pos = pessoas.map((p) => posicaoDe(p, dados)).filter((x) => x != null);
     if (pos.length < 3) return null;
-    const esq = pos.filter((x) => x < 5).length;
-    const dir = pos.filter((x) => x > 5).length;
-    const centro = pos.length - esq - dir;
     const fora = pessoas.length - pos.length;
     // A porcentagem é sobre quem tem partido conhecido, mas a barra cobre o
     // grupo inteiro: a fatia hachurada mostra de quanta gente não se sabe.
-    const pc = (n) => (100 * n) / pos.length;
+    const pc = (n) => Math.round((100 * n) / pos.length);
     const largura = (n) => (100 * n) / pessoas.length;
+    const contas = FAIXAS.map((f) => ({ ...f, n: pos.filter((x) => faixaDe(x) === f).length }));
+    const legenda = contas.filter((f) => f.n).map((f) => `${pc(f.n)}% ${f.rotulo.toLowerCase()}`).join(' · ');
     return h('div', { class: 'q-balanco' },
-      h('div', { class: 'q-barra', role: 'img', 'aria-label': `${Math.round(pc(esq))}% esquerda, ${Math.round(pc(dir))}% direita, entre ${pos.length} de ${pessoas.length}` },
-        esq ? h('span', { class: 'q-barra-esq', style: `width:${largura(esq)}%` }) : null,
-        centro ? h('span', { class: 'q-barra-meio', style: `width:${largura(centro)}%` }) : null,
-        dir ? h('span', { class: 'q-barra-dir', style: `width:${largura(dir)}%` }) : null,
-        fora ? h('span', { class: 'q-barra-fora', style: `width:${largura(fora)}%` }) : null),
+      h('div', { class: 'q-barra', role: 'img', 'aria-label': `${legenda}, entre ${pos.length} de ${pessoas.length}` },
+        contas.filter((f) => f.n).map((f) => h('span', { 'data-faixa': f.chave, style: `width:${largura(f.n)}%`, title: `${f.rotulo}: ${f.n}` })),
+        fora ? h('span', { class: 'q-barra-fora', style: `width:${largura(fora)}%`, title: `Sem partido ou sem classificação: ${fora}` }) : null),
       h('p', { class: 'q-nota' },
-        h('b', {}, `${Math.round(pc(esq))}%`), ' esquerda · ',
-        h('b', {}, `${Math.round(pc(dir))}%`), ' direita',
-        centro ? ` · ${Math.round(pc(centro))}% no centro` : '',
+        contas.filter((f) => f.n).flatMap((f, i) => [i ? ' · ' : '', h('b', {}, `${pc(f.n)}%`), ` ${f.rotulo.toLowerCase()}`]),
         fora ? `, entre os ${pos.length} de ${pessoas.length} com partido conhecido` : ''));
   }
 

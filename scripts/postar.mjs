@@ -16,6 +16,7 @@
 
 import { readFile, writeFile } from 'node:fs/promises';
 import { createHmac, randomBytes } from 'node:crypto';
+import { ETAPAS, etapaDe } from '../src/etapas.js';
 
 const RAIZ = new URL('..', import.meta.url);
 const ESTADO = 'data/postados.json';
@@ -39,10 +40,48 @@ function montar(fixo, livre, link) {
 
 // ---------- o que há pra postar ----------
 
-function novidades(pecs, eleicao, estado) {
+// Troca de gente nos cargos de cima, comparando os dois últimos registros do
+// histórico. Prefeito fica de fora de propósito: são 5.569, e uma renúncia em
+// cidade pequena não é assunto de um perfil sobre a rede de poder do país.
+function trocasDeCargo(historico) {
+  const [antes, agora] = (historico?.dias ?? []).slice(-2);
+  if (!antes?.cargos || !agora?.cargos || antes.data === agora.data) return [];
   const itens = [];
+  const comparar = (mapaAntes, mapaAgora, rotulo) => {
+    for (const [chave, novo] of Object.entries(mapaAgora ?? {})) {
+      const velho = mapaAntes?.[chave];
+      if (!velho || velho.id === novo.id) continue;
+      const cargo = typeof rotulo === 'function' ? rotulo(chave) : rotulo;
+      itens.push({
+        id: `troca:${chave}:${novo.id}`, data: agora.data,
+        texto: montar(`${cargo}: ${novo.nome}${novo.partido ? ` (${novo.partido})` : ''} no lugar de ${velho.nome}${velho.partido ? ` (${velho.partido})` : ''}.`,
+          '', `${SITE}#p=${encodeURIComponent(novo.id)}`),
+      });
+    }
+  };
+  comparar({ p: antes.cargos.presidente }, { p: agora.cargos.presidente }, 'Presidência da República');
+  comparar({ v: antes.cargos.vice }, { v: agora.cargos.vice }, 'Vice-presidência');
+  comparar(antes.cargos.ministros, agora.cargos.ministros, (pasta) => `Ministério — ${pasta}`);
+  comparar(antes.cargos.governadores, agora.cargos.governadores, (uf) => `Governo de ${uf}`);
+  return itens;
+}
+
+function novidades(pecs, eleicao, historico, estado) {
+  const itens = [...trocasDeCargo(historico)];
 
   for (const pec of pecs?.pecs ?? []) {
+    // A PEC andou de etapa: é o que diz se ela está perto de virar emenda.
+    const etapa = etapaDe(pec);
+    const antes = estado.etapas[pec.id];
+    estado.etapas[pec.id] = etapa;
+    if (antes && antes !== etapa && ETAPAS[etapa].ordem > ETAPAS[antes].ordem) {
+      itens.push({
+        id: `etapa:${pec.id}:${etapa}`, data: pec.estagio.data ?? new Date().toISOString().slice(0, 10),
+        texto: montar(`${pec.titulo} avançou: ${ETAPAS[etapa].rotulo.toLowerCase()}.`,
+          pec.ementa, `${SITE}#pec=${encodeURIComponent(pec.id)}`),
+      });
+    }
+
     for (const v of pec.votacoes) {
       const id = `pec:${pec.id}:${v.data}:${v.descricao.length}`;
       const resultado = v.resultado ? v.resultado.toUpperCase() : 'VOTADA';
@@ -122,10 +161,11 @@ async function postarNoX(texto, chaves, imagem = null) {
 
 // ---------- principal ----------
 
-const estado = { postados: [], pendentes: {}, ...(await ler(ESTADO, {})) };
+const estado = { postados: [], pendentes: {}, etapas: {}, composicao: {}, ...(await ler(ESTADO, {})) };
 const pecs = await ler('public/data/pecs.json', null);
 const eleicao = await ler('public/data/eleicao2026.json', null);
-const fila = novidades(pecs, eleicao, estado);
+const historico = await ler('public/data/historico.json', null);
+const fila = novidades(pecs, eleicao, historico, estado);
 const gravar = () => writeFile(new URL(ESTADO, RAIZ), JSON.stringify(estado, null, 1) + '\n');
 
 if (process.argv.includes('--semear')) {
@@ -184,6 +224,37 @@ if (process.argv.some((a) => a.startsWith('--composicao'))) {
 }
 if (!fila.length) console.log('Nada novo pra postar.');
 if (fila.length > MAX_POR_RODADA) console.warn(`${fila.length} itens na fila; só os ${MAX_POR_RODADA} mais antigos vão nesta rodada.`);
+
+// Dia parado: sai um retrato de um dos grupos, em rodízio. É o que mantém o
+// perfil vivo fora de sessão legislativa sem inventar notícia — o conteúdo é
+// o mesmo dado do site, e o rodízio evita repetir o mesmo grupo.
+const RODIZIO = ['senador', 'deputado', 'governador', 'ministro', 'prefeito'];
+const DIAS_ENTRE_RETRATOS = 2;
+
+if (!fila.length && !ensaio) {
+  const hoje = new Date().toISOString().slice(0, 10);
+  const ultimo = estado.composicao.quando;
+  const faz = ultimo ? (Date.parse(hoje) - Date.parse(ultimo)) / 864e5 : 99;
+  if (faz >= DIAS_ENTRE_RETRATOS) {
+    const cargo = RODIZIO[((RODIZIO.indexOf(estado.composicao.cargo) + 1) || 0) % RODIZIO.length];
+    try {
+      const { cartaoDoGrupo } = await import('./imagens.mjs');
+      const { png, balanco: b, titulo } = cartaoDoGrupo(cargo);
+      const texto = montar(`${titulo} hoje: ${b.dir}% de direita e ${b.esq}% de esquerda.`,
+        `Contagem de cabeças pela posição do partido, entre os ${b.conhecidos.toLocaleString('pt-BR')} com partido conhecido.`,
+        `${SITE}#rede`);
+      console.log(`--- retrato:${cargo}\n${texto}\n`);
+      const alt = `Gráfico de ${titulo.toLowerCase()}: ${b.gente.length} pessoas ordenadas da esquerda (vermelho) para a direita (azul) pela posição do partido. ${b.esq}% de esquerda e ${b.dir}% de direita.`;
+      console.log(`postado: https://x.com/i/status/${await postarNoX(texto, chaves, { png, alt })}`);
+      estado.composicao = { cargo, quando: hoje };
+      await gravar();
+    } catch (e) {
+      console.error(`retrato falhou: ${e.message}`);
+    }
+  } else {
+    console.log(`Retrato: o último foi há ${faz} dia(s); espera ${DIAS_ENTRE_RETRATOS}.`);
+  }
+}
 
 let falhas = 0;
 for (const item of fila.slice(0, MAX_POR_RODADA)) {

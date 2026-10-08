@@ -47,7 +47,9 @@ const marca = (x, y, r) => [[0, -1.5 * r, COR.texto], [-1.9 * r, 1.1 * r, COR.es
 
 const brasil = JSON.parse(await readFile(new URL('public/data/brasil.json', RAIZ), 'utf8'));
 const posicaoDe = (p) => (p.partido ? tabelaPartidos.partidos[p.partido]?.posicao ?? null : null);
-const doCargo = (cargo) => brasil.pessoas.filter((p) => p.cargo === cargo)
+const prefeitos = JSON.parse(await readFile(new URL('public/data/prefeitos.json', RAIZ), 'utf8').catch(() => '{"porUf":{}}'));
+const todosPrefeitos = Object.values(prefeitos.porUf).flat().filter((m) => !m.pendente);
+const doCargo = (cargo) => (cargo === 'prefeito' ? todosPrefeitos : brasil.pessoas.filter((p) => p.cargo === cargo))
   .sort((a, b) => (posicaoDe(a) ?? 99) - (posicaoDe(b) ?? 99));
 
 export function balanco(cargo) {
@@ -122,6 +124,42 @@ function cartaoSite() {
   ].join('');
   return png(svg, L, A);
 }
+
+// ---------- cartão de barra (cargos que não têm plenário) ----------
+
+const GRUPO = {
+  ministro: { titulo: 'Ministros de Estado', nota: 'Nomeados e demitidos pelo presidente.' },
+  governador: { titulo: 'Governadores', nota: '26 estados e o Distrito Federal.' },
+  prefeito: { titulo: 'Prefeitos', nota: 'Eleitos em 2024, nos 5.569 municípios.' },
+};
+
+export function cartaoBarra(cargo) {
+  const L = 1200, A = 675;
+  const g = GRUPO[cargo];
+  const b = balanco(cargo);
+  // Uma faixa por pessoa, lado a lado: a largura é a proporção e dá pra ver o
+  // tamanho do grupo pelo número de riscos.
+  const x0 = 80, larg = L - 160, y0 = 300, alt = 150;
+  const passo = larg / b.gente.length;
+  const riscos = b.gente.map((p, i) =>
+    `<rect x="${(x0 + i * passo).toFixed(2)}" y="${y0}" width="${Math.max(passo - (b.gente.length > 400 ? 0 : 0.8), 0.4).toFixed(2)}" height="${alt}" fill="${corDaPosicao(posicaoDe(p))}"/>`).join('');
+  const svg = [
+    `<rect width="${L}" height="${A}" fill="${COR.fundo}"/>`,
+    marca(54, 58, 13),
+    txt(104, 50, 'PoderBR', { tam: 27, peso: 'bold' }),
+    txt(104, 78, 'poderbrasileiro.github.io', { tam: 19, cor: COR.texto3 }),
+    txt(L / 2, 168, `${g.titulo} hoje`, { tam: 54, peso: 'bold', ancora: 'middle' }),
+    txt(L / 2, 216, `${b.esq}% esquerda · ${b.dir}% direita`, { tam: 36, cor: COR.texto2, ancora: 'middle' }),
+    riscos,
+    txt(x0, y0 + alt + 36, 'Esquerda', { tam: 22, cor: COR.texto3 }),
+    txt(x0 + larg, y0 + alt + 36, 'Direita', { tam: 22, cor: COR.texto3, ancora: 'end' }),
+    txt(L / 2, A - 58, `Cada risco é uma pessoa: ${b.gente.length.toLocaleString('pt-BR')} no total. ${g.nota}`, { tam: 20, cor: COR.texto3, ancora: 'middle' }),
+    txt(L / 2, A - 30, `${b.conhecidos.toLocaleString('pt-BR')} com partido conhecido · classificação de Bolognesi, Ribeiro e Codato (2023)`, { tam: 20, cor: COR.texto3, ancora: 'middle' }),
+  ].join('');
+  return { png: png(svg, L, A), balanco: b, titulo: g.titulo };
+}
+
+export const cartaoDoGrupo = (cargo) => (cargo === 'senador' || cargo === 'deputado' ? cartaoComposicao(cargo) : cartaoBarra(cargo));
 
 // ---------- banner do X ----------
 

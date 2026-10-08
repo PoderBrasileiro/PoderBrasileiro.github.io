@@ -335,13 +335,21 @@ span.votante { color: var(--texto-2); border-style: dashed; }
 
 /* ---------- movimento ---------- */
 @keyframes surgir { from { opacity: 0; transform: translateY(6px); } }
-@keyframes brotar { from { opacity: 0; transform: translate(-50%, -50%) scale(0.2); } }
-@keyframes brotar-fixo { from { opacity: 0; transform: scale(0.2); } }
+@keyframes brotar {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0); }
+  70% { opacity: 1; transform: translate(-50%, -50%) scale(1.25); }
+  100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+@keyframes brotar-fixo {
+  0% { opacity: 0; transform: scale(0); }
+  70% { opacity: 1; transform: scale(1.25); }
+  100% { opacity: 1; transform: scale(1); }
+}
 .aba-conteudo:not([hidden]) { animation: surgir 0.3s ease-out both; }
 .painel > * { animation: surgir 0.26s ease-out both; }
 /* Cascata curta: o olho lê como "o plenário se preenchendo", não como espera. */
-.q-plenario .b { animation: brotar 0.4s ease-out both; animation-delay: calc(var(--i) * 1.1ms); }
-.q-nuvem .b { animation: brotar-fixo 0.35s ease-out both; animation-delay: calc(var(--i) * 4ms); }
+.q-plenario .b { animation: brotar 0.42s cubic-bezier(0.34, 1.3, 0.64, 1) both; animation-delay: calc(190ms + var(--i) * 1.4ms); }
+.q-nuvem .b { animation: brotar-fixo 0.4s cubic-bezier(0.34, 1.3, 0.64, 1) both; animation-delay: calc(190ms + var(--i) * 9ms); }
 .uf, .municipio { transition: fill 0.35s ease, opacity 0.12s; }
 .b { transition: opacity 0.25s ease, transform 0.15s ease, border-color 0.15s ease; }
 .regua-marca { transition: left 0.4s cubic-bezier(0.22, 1, 0.36, 1); }
@@ -378,9 +386,14 @@ span.votante { color: var(--texto-2); border-style: dashed; }
 .q-balanco { width: 100%; display: flex; flex-direction: column; gap: 4px; }
 .q-barra { display: flex; height: 8px; border-radius: 4px; overflow: hidden; background: var(--borda); gap: 1px; }
 .q-barra span { height: 100%; }
-.q-barra-esq { background: var(--esq); }
-.q-barra-meio { background: var(--meio); }
-.q-barra-dir { background: var(--dir); }
+/* As cinco faixas saem da mesma régua: as pontas cheias e os meios-termos a
+   meio caminho do cinza, pra barra ser lida como um degradê e não como cinco
+   cores diferentes. */
+.q-barra [data-faixa="esquerda"] { background: var(--esq); }
+.q-barra [data-faixa="centro-esquerda"] { background: color-mix(in srgb, var(--esq) 55%, var(--meio)); }
+.q-barra [data-faixa="centro"] { background: var(--meio); }
+.q-barra [data-faixa="centro-direita"] { background: color-mix(in srgb, var(--dir) 55%, var(--meio)); }
+.q-barra [data-faixa="direita"] { background: var(--dir); }
 
 /* ---------- etapas da PEC ---------- */
 .selo-etapa[data-etapa="promulgada"] { border-color: #0ca30c; color: #0a7a0a; }
@@ -439,3 +452,6 @@ span.votante { color: var(--texto-2); border-style: dashed; }
 /* O conteúdo da aba já entra pelas peças de dentro; o bloco todo só aparece. */
 .aba-conteudo:not([hidden]) { animation: aparecer 0.2s ease-out both; }
 @keyframes aparecer { from { opacity: 0; } }
+/* Retratos e assentos com nome seguem a mesma chegada das bolinhas. */
+.q-destaques .b-nome, .q-indicacao { animation: brotar-fixo 0.42s cubic-bezier(0.34, 1.3, 0.64, 1) both; animation-delay: calc(230ms + var(--i, 0) * 45ms); }
+.q-destaques .b-nome { transform-origin: left center; }
