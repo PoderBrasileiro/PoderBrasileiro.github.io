@@ -43,11 +43,20 @@ jobs:
         if: github.event_name != 'push'
         continue-on-error: true
         timeout-minutes: 10
+      # Sem os quatro segredos cadastrados o script só ensaia, não posta.
+      - run: npm run postar
+        continue-on-error: true
+        env:
+          X_API_KEY: ${{ secrets.X_API_KEY }}
+          X_API_SECRET: ${{ secrets.X_API_SECRET }}
+          X_ACCESS_TOKEN: ${{ secrets.X_ACCESS_TOKEN }}
+          X_ACCESS_SECRET: ${{ secrets.X_ACCESS_SECRET }}
+          SITE_URL: ${{ steps.pages.outputs.base_url }}/
       - name: Guardar dados novos
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add public/data
+          git add public/data data/postados.json
           git diff --cached --quiet || git commit -m "chore: atualiza dados"
           git push
       - run: npm run build
