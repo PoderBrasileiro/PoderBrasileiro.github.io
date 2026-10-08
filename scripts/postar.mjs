@@ -33,11 +33,30 @@ const dataBr = (iso) => iso.slice(0, 10).split('-').reverse().join('/');
 const comPartido = (c) => `${c.nome} (${c.partido ?? 'sem partido'})`;
 
 // Monta o texto cortando o trecho livre pra caber, sem estourar o limite.
-function montar(fixo, livre, link) {
-  const sobra = LIMITE - fixo.length - TAMANHO_LINK - 4;
+function montar(fixo, livre, link, tags = []) {
+  const marcas = tags.filter(Boolean).slice(0, MAX_TAGS).join(' ');
+  const sobra = LIMITE - fixo.length - TAMANHO_LINK - marcas.length - 6;
   const trecho = livre && sobra > 20 ? (livre.length > sobra ? `${livre.slice(0, sobra - 1).trimEnd()}…` : livre) : '';
-  return [fixo, trecho, link].filter(Boolean).join('\n\n');
+  return [fixo, trecho, [link, marcas].filter(Boolean).join('\n')].filter(Boolean).join('\n\n');
 }
+
+// Marcadores. Três é o teto de propósito: mais que isso o X trata como spam e
+// entrega menos. Vão sempre no fim, depois do link, e nunca no meio da frase —
+// hashtag no meio do texto atrapalha quem usa leitor de tela.
+const MAX_TAGS = 3;
+const TAG_CASA = { Senado: '#Senado', 'Câmara': '#Câmara' };
+const TAG_GRUPO = {
+  senador: ['#Senado', '#Congresso'],
+  deputado: ['#Câmara', '#Congresso'],
+  ministro: ['#Governo', '#Esplanada'],
+  governador: ['#Governadores', '#Brasil'],
+  prefeito: ['#Prefeitos', '#Municípios'],
+};
+// "#MinasGerais" alcança gente; "#MG" é ambíguo demais pra servir de marcador.
+const tagDoEstado = (uf) => {
+  const nome = brasil?.ufs.find((u) => u.sigla === uf)?.nome;
+  return nome ? `#${nome.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^A-Za-z]/g, '')}` : null;
+};
 
 // ---------- o que há pra postar ----------
 
@@ -56,7 +75,8 @@ function trocasDeCargo(historico) {
       itens.push({
         id: `troca:${chave}:${novo.id}`, data: agora.data,
         texto: montar(`${cargo}: ${novo.nome}${novo.partido ? ` (${novo.partido})` : ''} no lugar de ${velho.nome}${velho.partido ? ` (${velho.partido})` : ''}.`,
-          '', `${SITE}#p=${encodeURIComponent(novo.id)}`),
+          '', `${SITE}#p=${encodeURIComponent(novo.id)}`,
+          chave.length === 2 ? [tagDoEstado(chave), '#Governadores'] : ['#Governo', '#Esplanada']),
       });
     }
   };
@@ -79,7 +99,8 @@ function novidades(pecs, eleicao, historico, estado) {
       itens.push({
         id: `etapa:${pec.id}:${etapa}`, data: pec.estagio.data ?? new Date().toISOString().slice(0, 10),
         texto: montar(`${pec.titulo} avançou: ${ETAPAS[etapa].rotulo.toLowerCase()}.`,
-          pec.ementa, `${SITE}#pec=${encodeURIComponent(pec.id)}`),
+          pec.ementa, `${SITE}#pec=${encodeURIComponent(pec.id)}`,
+          ['#PEC', TAG_CASA[pec.casa], '#Congresso']),
       });
     }
 
@@ -90,7 +111,8 @@ function novidades(pecs, eleicao, historico, estado) {
         id, data: v.data,
         texto: montar(
           `${pec.titulo} — ${resultado} no plenário ${pec.casa === 'Senado' ? 'do Senado' : 'da Câmara'} em ${dataBr(v.data)}.\nSim ${v.placar.Sim ?? 0} · Não ${v.placar['Não'] ?? 0}`,
-          pec.ementa, `Veja como cada parlamentar votou: ${SITE}#pecs`),
+          pec.ementa, `Veja como cada parlamentar votou: ${SITE}#pecs`,
+          ['#PEC', TAG_CASA[pec.casa], '#Congresso']),
       });
     }
   }
@@ -107,7 +129,8 @@ function novidades(pecs, eleicao, historico, estado) {
       itens.push({
         id, data: eleicao.geradoEm.slice(0, 10), resolve: id,
         texto: montar(`2º turno — ${rotulo}: eleito(a) ${comPartido(e)}${e.pct ? `, com ${e.pct}% dos votos válidos` : ''}.`,
-          e.vice ? `Vice: ${e.vice.nome}.` : '', `Quem fica e quem sai em 2027: ${SITE}#rede`),
+          e.vice ? `Vice: ${e.vice.nome}.` : '', `Quem fica e quem sai em 2027: ${SITE}#rede`,
+        ['#Eleições2026', '#SegundoTurno', chave.startsWith('governador:') ? tagDoEstado(chave.slice(11)) : null]),
       });
     }
   }
@@ -166,6 +189,7 @@ const estado = { postados: [], pendentes: {}, etapas: {}, composicao: {}, feitos
 // Os 43 itens antigos valem pros três canais: são votações de 2025 que não
 // devem reaparecer em lugar nenhum.
 for (const canal of ['x', 'bsky', 'relatorio']) estado.feitos[canal] ??= [...estado.postados];
+const brasil = await ler('public/data/brasil.json', null);
 const pecs = await ler('public/data/pecs.json', null);
 const eleicao = await ler('public/data/eleicao2026.json', null);
 const historico = await ler('public/data/historico.json', null);
@@ -222,7 +246,7 @@ if (process.argv.some((a) => a.startsWith('--composicao'))) {
   const b = img.balanco;
   const texto = montar(`${img.titulo} hoje: ${b.dir}% de direita e ${b.esq}% de esquerda${b.centro ? `, ${b.centro}% no centro` : ''}.`,
     `Contagem de cabeças pela posição do partido de cada um dos ${b.gente.length}, segundo classificação de cientistas políticos. Quem é quem, cadeira por cadeira:`,
-    `${SITE}#rede`);
+    `${SITE}#rede`, TAG_GRUPO[cargo]);
   console.log(texto + '\n');
   if (ensaio) process.exit(0);
   console.log(`postado: https://x.com/i/status/${await postarNoX(texto, chaves, img)}`);
@@ -233,6 +257,7 @@ if (process.argv.some((a) => a.startsWith('--composicao'))) {
 // Dia parado: entra um retrato de um dos grupos, em rodízio. É o que mantém o
 // perfil vivo fora de sessão legislativa sem inventar notícia — o conteúdo é o
 // mesmo dado do site, e o rodízio evita repetir o grupo.
+const repetir = process.argv.includes('--repetir');
 const RODIZIO = ['senador', 'deputado', 'governador', 'ministro', 'prefeito'];
 const DIAS_ENTRE_RETRATOS = 2;
 const hoje = new Date().toISOString().slice(0, 10);
@@ -240,14 +265,15 @@ const hoje = new Date().toISOString().slice(0, 10);
 async function retratoDoDia() {
   const ultimo = estado.composicao.quando;
   const faz = ultimo ? (Date.parse(hoje) - Date.parse(ultimo)) / 864e5 : 99;
-  if (faz < DIAS_ENTRE_RETRATOS) { console.log(`Retrato: o último foi há ${faz} dia(s); espera ${DIAS_ENTRE_RETRATOS}.`); return null; }
+  if (faz < DIAS_ENTRE_RETRATOS && !repetir) { console.log(`Retrato: o último foi há ${faz} dia(s); espera ${DIAS_ENTRE_RETRATOS}.`); return null; }
   const cargo = RODIZIO[(RODIZIO.indexOf(estado.composicao.cargo) + 1) % RODIZIO.length];
   const { cartaoDoGrupo } = await import('./imagens.mjs');
   const { png, balanco: b, titulo } = cartaoDoGrupo(cargo);
   return {
     id: `retrato:${cargo}:${hoje}`, data: hoje, cargo,
     texto: montar(`${titulo} hoje: ${b.dir}% de direita e ${b.esq}% de esquerda.`,
-      `Contagem de cabeças pela posição do partido, entre os ${b.conhecidos.toLocaleString('pt-BR')} com partido conhecido.`, `${SITE}#rede`),
+      `Contagem de cabeças pela posição do partido, entre os ${b.conhecidos.toLocaleString('pt-BR')} com partido conhecido.`, `${SITE}#rede`,
+      TAG_GRUPO[cargo]),
     imagem: {
       png, arquivo: `${cargo}.png`,
       alt: `Gráfico — ${titulo}: ${b.gente.length} pessoas ordenadas da esquerda (vermelho) para a direita (azul) pela posição do partido. ${b.esq}% de esquerda e ${b.dir}% de direita.`,
@@ -264,7 +290,7 @@ if (!pauta.length) {
   console.warn(`${fila.length} itens na fila; só os ${MAX_POR_RODADA} mais antigos vão nesta rodada.`);
 }
 
-const novos = (canal) => pauta.filter((p) => !(estado.feitos[canal] ?? []).includes(p.id));
+const novos = (canal) => (repetir ? pauta : pauta.filter((p) => !(estado.feitos[canal] ?? []).includes(p.id)));
 const marcar = (canal, item) => {
   (estado.feitos[canal] ??= []).push(item.id);
   if (item.resolve) delete estado.pendentes[item.resolve];
@@ -279,20 +305,26 @@ if (process.argv.includes('--relatorio')) {
   const itens = novos('relatorio');
   await mkdir(new URL('relatorios/', RAIZ), { recursive: true });
   await mkdir(new URL('public/cartoes/', RAIZ), { recursive: true });
-  const linhas = [`# Pauta de ${dataBr(hoje)}`, ''];
+  const linhas = [
+    `# Pauta de ${dataBr(hoje)}`, '',
+    'Copie o bloco de texto, baixe a imagem pelo link e cole o texto alternativo no campo de acessibilidade do X.', '',
+  ];
   if (!itens.length) {
     linhas.push('Nada para postar hoje.', '', `Último retrato: ${estado.composicao.quando ?? '—'}. O próximo sai ${DIAS_ENTRE_RETRATOS} dias depois dele.`);
   }
   for (const [n, item] of itens.entries()) {
-    linhas.push(`## ${n + 1}. ${item.id.split(':')[0]}`, '', '~~~', item.texto, '~~~', '');
+    const tipo = { retrato: 'Retrato do dia', pec: 'Votação de PEC', etapa: 'PEC avançou', troca: 'Troca de cargo', '2turno': 'Resultado do 2º turno' }[item.id.split(':')[0]] ?? item.id.split(':')[0];
+    linhas.push(`## ${n + 1}. ${tipo}`, '', `${[...item.texto].length} de 280 caracteres`, '', '~~~', item.texto, '~~~', '');
     if (item.imagem) {
       await writeFile(new URL(`public/cartoes/${item.imagem.arquivo}`, RAIZ), item.imagem.png);
-      linhas.push(`**Imagem:** ${SITE}cartoes/${item.imagem.arquivo}`, '',
-        `**Texto alternativo** (cole no campo de acessibilidade): ${item.imagem.alt}`, '');
+      linhas.push(`**Imagem:** ${SITE}cartoes/${item.imagem.arquivo}` + ' — abra o link e salve a imagem.', '',
+        '**Texto alternativo**, pra colar no campo de acessibilidade:', '', '~~~', item.imagem.alt, '~~~', '');
     }
     marcar('relatorio', item);
   }
-  linhas.push('---', '', 'Gerado por `npm run relatorio`. O que já apareceu aqui não volta em pautas futuras; as anteriores ficam em `relatorios/`.');
+  linhas.push('---', '',
+    'Gerado sozinho pelo workflow, todo dia. O que já apareceu aqui não volta em pautas futuras; as anteriores ficam em `relatorios/`.',
+    '', 'Para refazer a pauta de hoje com os itens que já saíram: `npm run relatorio -- --repetir`.');
   const texto = linhas.join('\n').replaceAll('~~~', '```') + '\n';
   await writeFile(new URL(`relatorios/${hoje}.md`, RAIZ), texto);
   await writeFile(new URL('PAUTA.md', RAIZ), texto);
