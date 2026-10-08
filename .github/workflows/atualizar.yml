@@ -24,6 +24,8 @@ jobs:
       url: ${{ steps.deploy.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+      - id: pages
+        uses: actions/configure-pages@v5
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -49,6 +51,8 @@ jobs:
           git diff --cached --quiet || git commit -m "chore: atualiza dados"
           git push
       - run: npm run build
+        env:
+          SITE_URL: ${{ steps.pages.outputs.base_url }}/
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist

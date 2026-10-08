@@ -200,6 +200,11 @@ pintar();
 painel.resumo();
 const inicial = location.hash.slice(1);
 if (['rede', 'lista', 'pecs'].includes(inicial)) abrirAba(inicial);
+// Link direto pra ficha de alguém (#p=senador-123), usado pelas páginas
+// estáticas que os buscadores indexam. Prefeito só existe depois que
+// prefeitos.json carrega, então esse caso espera.
+const pessoaInicial = inicial.startsWith('p=') ? decodeURIComponent(inicial.slice(2)) : null;
+if (pessoaInicial && dados.pessoaPorId.has(pessoaInicial)) acoes.aoEscolherPessoa(pessoaInicial);
 
 // ---------- PECs (carregadas depois, como os prefeitos) ----------
 
