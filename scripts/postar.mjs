@@ -78,24 +78,27 @@ function novidades(pecs, eleicao, estado) {
 
 const pct = (s) => encodeURIComponent(s).replace(/[!'()*]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`);
 
-async function postarNoX(texto, chaves) {
-  const url = 'https://api.x.com/2/tweets';
+// Assina e chama a API. Sem `corpo` é um GET (usado só pra conferir as chaves).
+async function chamarX(url, chaves, corpo = null) {
   const oauth = {
     oauth_consumer_key: chaves.key, oauth_token: chaves.token,
     oauth_nonce: randomBytes(16).toString('hex'), oauth_timestamp: String(Math.floor(Date.now() / 1000)),
     oauth_signature_method: 'HMAC-SHA1', oauth_version: '1.0',
   };
   // Corpo JSON não entra na assinatura; só os parâmetros oauth.
-  const base = ['POST', pct(url), pct(Object.keys(oauth).sort().map((k) => `${pct(k)}=${pct(oauth[k])}`).join('&'))].join('&');
+  const metodo = corpo ? 'POST' : 'GET';
+  const base = [metodo, pct(url), pct(Object.keys(oauth).sort().map((k) => `${pct(k)}=${pct(oauth[k])}`).join('&'))].join('&');
   oauth.oauth_signature = createHmac('sha1', `${pct(chaves.secret)}&${pct(chaves.tokenSecret)}`).update(base).digest('base64');
   const r = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `OAuth ${Object.keys(oauth).sort().map((k) => `${pct(k)}="${pct(oauth[k])}"`).join(', ')}` },
-    body: JSON.stringify({ text: texto }),
+    method: metodo,
+    headers: { ...(corpo ? { 'Content-Type': 'application/json' } : {}), Authorization: `OAuth ${Object.keys(oauth).sort().map((k) => `${pct(k)}="${pct(oauth[k])}"`).join(', ')}` },
+    ...(corpo ? { body: JSON.stringify(corpo) } : {}),
   });
   if (!r.ok) throw new Error(`X respondeu ${r.status}: ${(await r.text()).slice(0, 300)}`);
-  return (await r.json()).data?.id;
+  return (await r.json()).data;
 }
+
+const postarNoX = async (texto, chaves) => (await chamarX('https://api.x.com/2/tweets', chaves, { text: texto }))?.id;
 
 // ---------- principal ----------
 
@@ -115,6 +118,24 @@ if (process.argv.includes('--semear')) {
 const chaves = { key: process.env.X_API_KEY, secret: process.env.X_API_SECRET, token: process.env.X_ACCESS_TOKEN, tokenSecret: process.env.X_ACCESS_SECRET };
 const ensaio = !Object.values(chaves).every(Boolean);
 if (ensaio) console.log('Chaves do X ausentes: ENSAIO, nada será postado.\n');
+
+// Confere as chaves sem postar nada.
+if (process.argv.includes('--verificar')) {
+  if (ensaio) { console.error('Faltam chaves: ' + Object.keys(chaves).filter((k) => !chaves[k]).join(', ')); process.exit(1); }
+  const eu = await chamarX('https://api.x.com/2/users/me', chaves);
+  console.log(`Chaves OK — conta @${eu.username} (${eu.name}).`);
+  process.exit(0);
+}
+
+// Post de estreia, uma vez só.
+if (process.argv.includes('--apresentacao')) {
+  const texto = montar('Este perfil publica, de forma automática, o que o Congresso vota e o que a eleição muda no poder — a partir de dados públicos da Câmara, do Senado e do TSE.',
+    'Mapa dos 5.569 municípios, os três poderes e a transição para 2027:', SITE);
+  console.log(texto + '\n');
+  if (ensaio) process.exit(0);
+  console.log(`postado: https://x.com/i/status/${await postarNoX(texto, chaves)}`);
+  process.exit(0);
+}
 if (!fila.length) console.log('Nada novo pra postar.');
 if (fila.length > MAX_POR_RODADA) console.warn(`${fila.length} itens na fila; só os ${MAX_POR_RODADA} mais antigos vão nesta rodada.`);
 

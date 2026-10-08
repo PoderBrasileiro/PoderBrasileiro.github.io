@@ -1,0 +1,32 @@
+# Postagem manual no X: conferir as chaves ou publicar o post de estreia.
+# "novidades" não é uma opção do script: sem flag conhecida ele já faz isso.
+# A postagem automática do dia a dia está no workflow "Atualizar dados e
+# publicar"; este aqui é só pra rodar na mão quando precisar.
+name: Postar no X (manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      acao:
+        description: O que fazer
+        required: true
+        default: verificar
+        type: choice
+        options: [verificar, apresentacao, novidades]
+
+jobs:
+  postar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run postar -- --${{ inputs.acao }}
+        env:
+          X_API_KEY: ${{ secrets.X_API_KEY }}
+          X_API_SECRET: ${{ secrets.X_API_SECRET }}
+          X_ACCESS_TOKEN: ${{ secrets.X_ACCESS_TOKEN }}
+          X_ACCESS_SECRET: ${{ secrets.X_ACCESS_SECRET }}
