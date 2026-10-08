@@ -19,6 +19,7 @@ npm run dev        # abre em http://localhost:5173
 ```bash
 npm run coletar    # cargos, mapa e votações  -> public/data/brasil.json, malha.json
 npm run eleicao    # transição 2027: resultado de 2026 x quem está no cargo -> eleicao2026.json
+npm run pecs       # PECs: estágio e voto nominal de cada parlamentar -> pecs.json
 npm run prefeitos  # prefeitos eleitos em 2024 e malhas municipais (minutos; rodar só quando precisar)
 npm run noticias   # manchetes dos feeds RSS    -> public/data/noticias.json (acumula a cada rodada)
 ```
@@ -36,6 +37,7 @@ de uma tabela da Wikipédia, e se o formato dela mudar o parser quebra.
 | Governadores | Wikipédia em português |
 | Prefeitos | resultado oficial do TSE, eleição de 2024 (eleitos, não necessariamente os atuais) |
 | Transição 2027 (⇄) | resultado oficial do TSE da eleição de 2026, casado por nome com os ocupantes atuais |
+| PECs (estágio e votos) | Dados Abertos da Câmara e do Senado |
 | Mapa e UFs | IBGE |
 | Presidente e vice | `data/manual.json` |
 | Posição dos partidos | `data/partidos.json` |

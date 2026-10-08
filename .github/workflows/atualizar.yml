@@ -35,6 +35,8 @@ jobs:
         continue-on-error: true
       - run: npm run eleicao
         continue-on-error: true
+      - run: npm run pecs
+        continue-on-error: true
       - run: npm run noticias
         if: github.event_name != 'push'
         continue-on-error: true

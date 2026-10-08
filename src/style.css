@@ -283,3 +283,20 @@ button.prefeito-linha:hover { background: var(--fundo-2); }
 .transicao .b[data-sit="depende"], .q-legenda .b[data-sit="depende"] { opacity: 0.55; border-style: dotted; border-color: var(--texto-2); }
 .transicao .b[data-sit="muda"], .q-legenda .b[data-sit="muda"] { border-style: dashed; border-color: var(--destaque); }
 .transicao .b[data-sit="segundo-turno"], .q-legenda .b[data-sit="segundo-turno"] { border-color: var(--aviso-borda); box-shadow: 0 0 0 2px var(--aviso-borda); }
+
+/* ---------- PECs ---------- */
+#vis-pecs { overflow-y: auto; }
+.pecs { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 8px; }
+.pecs-filtro { font-size: 13px; color: var(--texto-2); }
+.pecs-filtro[hidden] { display: none; }
+.pec { display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; text-align: left; background: var(--fundo-2); border: 1px solid var(--borda); border-radius: 10px; }
+.pec:hover { border-color: var(--texto-3); }
+.pec.ativa { border-color: var(--destaque); outline: 1px solid var(--destaque); }
+.pec-topo { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.pec-ementa { font-size: 13px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.pec small { color: var(--texto-2); }
+.votos summary { cursor: pointer; font-weight: 600; font-size: 13px; }
+.votantes { display: flex; flex-wrap: wrap; gap: 4px; padding: 6px 0; }
+.votante { padding: 1px 7px; border: 1px solid var(--borda); border-radius: 999px; background: none; font-size: 12px; }
+button.votante:hover { background: var(--fundo-2); }
+span.votante { color: var(--texto-2); border-style: dashed; }

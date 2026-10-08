@@ -10,7 +10,8 @@
     "coletar": "node scripts/coletar.mjs",
     "noticias": "node scripts/noticias.mjs",
     "prefeitos": "node scripts/prefeitos.mjs",
-    "eleicao": "node scripts/eleicao2026.mjs"
+    "eleicao": "node scripts/eleicao2026.mjs",
+    "pecs": "node scripts/pecs.mjs"
   },
   "dependencies": {
     "d3": "^7.9.0"

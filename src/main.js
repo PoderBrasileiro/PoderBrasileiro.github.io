@@ -2,6 +2,7 @@ import { h, CARGOS, escalaEspectro, posicaoDe, textoPartido, ondeAtua, fmtNum, f
 import { criarMapa } from './mapa.js';
 import { criarRede } from './rede.js';
 import { criarPainel } from './painel.js';
+import { criarPecs } from './pecs.js';
 
 const base = import.meta.env.BASE_URL;
 const carregar = (nome) => fetch(`${base}data/${nome}`).then((r) => (r.ok ? r.json() : Promise.reject(new Error(`${nome}: HTTP ${r.status}`))));
@@ -33,21 +34,25 @@ const acoes = {
   aoEscolherUf: (uf) => selecionar({ uf }),
   aoVerMinistros: () => selecionar({ ministros: true }),
   aoVerMapa: () => abrirAba('mapa'),
+  aoEscolherPec: (pec) => selecionar({ pec }),
   carregarMalhaUf: (uf) => carregar(`malhas/${uf}.json`),
 };
 
 const mapa = criarMapa(document.getElementById('vis-mapa'), dados, acoes);
 const rede = criarRede(document.getElementById('vis-rede'), dados, acoes);
 const painel = criarPainel(document.getElementById('painel'), dados, acoes);
+const abaPecs = criarPecs(document.getElementById('vis-pecs'), dados, acoes);
 
 let selecaoAtual = {};
 function selecionar(sel) {
   selecaoAtual = sel;
   mapa.selecionar(sel);
   rede.selecionar(sel);
+  abaPecs.selecionar(sel);
   if (sel.pessoa) painel.pessoa(sel.pessoa);
   else if (sel.uf) painel.uf(sel.uf);
   else if (sel.ministros) painel.ministros();
+  else if (sel.pec) painel.pec(sel.pec);
   else painel.resumo();
   // No celular o painel fica abaixo da visualização.
   if (matchMedia('(max-width: 900px)').matches) document.getElementById('painel').scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -66,7 +71,7 @@ matchMedia('(prefers-color-scheme: dark)').addEventListener('change', pintar);
 function desenharLegenda() {
   const aba = document.querySelector('.abas [aria-selected="true"]').dataset.aba;
   const el = document.getElementById('legenda');
-  el.hidden = aba === 'lista';
+  el.hidden = aba === 'lista' || aba === 'pecs';
   el.replaceChildren(
     h('div', { class: 'legenda-item' },
       h('span', {}, 'esquerda'), h('span', { class: 'legenda-rampa' }), h('span', {}, 'direita')),
@@ -111,7 +116,7 @@ const redesenharLista = criarLista(document.getElementById('vis-lista'));
 
 function abrirAba(nome) {
   for (const b of document.querySelectorAll('.abas button')) b.setAttribute('aria-selected', String(b.dataset.aba === nome));
-  for (const a of ['mapa', 'rede', 'lista']) document.getElementById(`vis-${a}`).hidden = a !== nome;
+  for (const a of ['mapa', 'rede', 'lista', 'pecs']) document.getElementById(`vis-${a}`).hidden = a !== nome;
   history.replaceState(null, '', `#${nome}`);
   desenharLegenda();
 }
@@ -152,6 +157,7 @@ document.getElementById('metodologia').append(
     h('li', {}, 'Governadores: ', link('Wikipédia em português', 'https://pt.wikipedia.org/wiki/Lista_de_governadores_das_unidades_federativas_do_Brasil'), ' — não existe fonte oficial única; confira no site do governo estadual em caso de dúvida.'),
     h('li', {}, 'Prefeitos: ', link('resultado oficial do TSE', 'https://resultados.tse.jus.br/'), ' da eleição de 2024. É quem foi eleito, não necessariamente quem está no cargo hoje.'),
     h('li', {}, 'Transição 2027 (⇄): ', link('resultado oficial do TSE', 'https://resultados.tse.jus.br/'), ' da eleição de 2026, cruzado pelo nome com quem está no cargo hoje. Nomes escritos de forma diferente nas duas fontes podem não casar, e aí a pessoa aparece como "sai" por engano.'),
+    h('li', {}, 'PECs: ', link('Dados Abertos da Câmara', 'https://dadosabertos.camara.leg.br/'), ' e do Senado. Só votações nominais de plenário; as simbólicas não registram voto individual.'),
     h('li', {}, 'Mapa e lista de estados: ', link('IBGE', 'https://servicodados.ibge.gov.br/api/docs/'), '.')),
   h('h4', {}, 'Esquerda × direita'),
   h('p', {}, 'Não existe medida oficial. O site mostra duas coisas separadas e diz qual é qual:'),
@@ -193,4 +199,11 @@ carregar('prefeitos.json').then((prefeitos) => {
 pintar();
 painel.resumo();
 const inicial = location.hash.slice(1);
-if (['rede', 'lista'].includes(inicial)) abrirAba(inicial);
+if (['rede', 'lista', 'pecs'].includes(inicial)) abrirAba(inicial);
+
+// ---------- PECs (carregadas depois, como os prefeitos) ----------
+
+carregar('pecs.json').then((pecs) => { dados.pecs = pecs; }).catch(() => { dados.pecs = null; }).finally(() => {
+  abaPecs.atualizar();
+  if (selecaoAtual.pessoa) painel.pessoa(selecaoAtual.pessoa);
+});

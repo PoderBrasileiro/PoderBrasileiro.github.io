@@ -1,6 +1,7 @@
 // Painel lateral: resumo, UF, lista de ministros ou ficha de uma pessoa.
 
 import { h, trocar, CARGOS, SITUACOES, destinoDe, selo, textoPartido, ondeAtua, fmtNum, fmtData, semAcento } from './comum.js';
+import { ROTULO_VOTO, tiposDeVoto, placarCurto } from './pecs.js';
 
 function avatar(p, grande = false) {
   const iniciais = p.nome.split(/\s+/).filter((s) => s.length > 2).slice(0, 2).map((s) => s[0]).join('').toUpperCase();
@@ -170,7 +171,7 @@ function blocoNoticias(p, dados) {
   return sec;
 }
 
-export function criarPainel(raiz, dados, { aoEscolherPessoa, aoEscolherUf, aoVerMinistros }) {
+export function criarPainel(raiz, dados, { aoEscolherPessoa, aoEscolherUf, aoVerMinistros, aoEscolherPec }) {
   const voltar = (rotulo, acao) => h('button', { class: 'voltar', onclick: acao }, `← ${rotulo}`);
 
   function blocoDeputados(lista) {
@@ -178,6 +179,27 @@ export function criarPainel(raiz, dados, { aoEscolherPessoa, aoEscolherUf, aoVer
     return h('section', {}, h('h3', {}, `Deputados federais (${lista.length})`),
       h('ul', { class: 'prefeitos' }, lista.map((p) => h('li', {},
         h('button', { class: 'prefeito-linha', onclick: () => aoEscolherPessoa(p.id) }, h('b', {}, p.nome), h('small', {}, textoPartido(p)))))));
+  }
+
+  // Como a pessoa votou em cada PEC: o voto da votação mais recente de cada uma.
+  function blocoPecs(p) {
+    if (p.cargo !== 'deputado' && p.cargo !== 'senador') return null;
+    const sec = h('section', {}, h('h3', {}, 'Votos em PECs'));
+    if (dados.pecs === undefined) return sec.append(h('p', { class: 'fraco' }, 'Carregando…')), sec;
+    const linhas = [];
+    for (const pec of dados.pecs?.pecs ?? []) {
+      for (const v of pec.votacoes) {
+        const voto = Object.keys(v.votos).find((t) => v.votos[t].includes(p.id));
+        if (!voto) continue;
+        linhas.push(h('li', {}, h('button', { class: 'prefeito-linha', onclick: () => aoEscolherPec(pec.id) },
+          h('b', {}, `${pec.titulo} — ${ROTULO_VOTO[voto] ?? voto}`),
+          h('small', {}, `${fmtData(v.data)} · ${placarCurto(v)} · ${(pec.ementa ?? '').slice(0, 90)}…`))));
+        break;   // só a votação mais recente de cada PEC
+      }
+    }
+    sec.append(linhas.length ? h('ul', { class: 'prefeitos' }, linhas)
+      : h('p', { class: 'fraco' }, 'Nenhum voto registrado nas votações nominais de PEC do período.'));
+    return sec;
   }
 
   // Lista de prefeitos do estado, com filtro. São centenas por UF, então é
@@ -250,6 +272,41 @@ export function criarPainel(raiz, dados, { aoEscolherPessoa, aoEscolherUf, aoVer
         lista.map((p) => cartao(p, dados, aoEscolherPessoa)));
     },
 
+    pec(id) {
+      const d = dados.pecs;
+      const p = d?.pecs.find((x) => x.id === id);
+      if (!p) return this.resumo();
+      const e = p.estagio;
+      // Quem está no cargo hoje vira botão pra ficha; quem já saiu fica só o nome.
+      const votante = (pid) => {
+        const [nome, partido, uf] = d.nomes[pid] ?? ['?', null, null];
+        const rotulo = `${nome} (${[partido, uf].filter(Boolean).join('-')})`;
+        return dados.pessoaPorId.has(pid)
+          ? h('button', { class: 'votante', onclick: () => aoEscolherPessoa(pid) }, rotulo)
+          : h('span', { class: 'votante' }, rotulo);
+      };
+      trocar(raiz,
+        h('p', { class: 'sobretitulo' }, `Proposta de emenda à Constituição · ${p.casa}`),
+        h('h2', {}, p.titulo),
+        h('p', {}, p.ementa),
+        h('section', {}, h('h3', {}, p.casa === 'Senado' ? 'Estágio no Senado' : 'Estágio na Câmara'),
+          e.situacao ? h('p', {}, h('b', {}, e.situacao), e.orgao ? ` — ${e.orgao}` : '') : null,
+          e.tramitacao ? h('p', { class: e.situacao ? 'fraco' : null }, e.situacao ? `Último andamento: ${e.tramitacao}` : e.tramitacao) : null,
+          e.data ? h('p', { class: 'fraco' }, `Em ${fmtData(e.data)}.`) : null,
+          h('p', { class: 'fraco' }, 'Uma PEC precisa de 3/5 dos votos, em dois turnos, em cada casa: 308 deputados e 49 senadores.'),
+          h('ul', { class: 'buscas' }, h('li', {}, h('a', { href: p.link, target: '_blank', rel: 'noopener noreferrer' }, `Tramitação completa na ${p.casa === 'Senado' ? 'página do Senado' : 'página da Câmara'} ↗`)))),
+        p.votacoes.length
+          ? p.votacoes.map((v) => h('section', {},
+            h('h3', {}, `Votação de ${fmtData(v.data)}${v.resultado ? ` · ${v.resultado}` : ''}`),
+            h('p', { class: 'numero' }, h('b', {}, v.placar.Sim ?? 0), ' sim · ', h('b', {}, v.placar['Não'] ?? 0), ' não'),
+            h('p', { class: 'fraco' }, v.descricao),
+            tiposDeVoto(v.votos).map((t) => h('details', { class: 'votos' },
+              h('summary', {}, `${ROTULO_VOTO[t] ?? t} (${v.votos[t].length})`),
+              h('div', { class: 'votantes' }, v.votos[t].map(votante).sort((a, b) => a.textContent.localeCompare(b.textContent, 'pt')))))))
+          : h('section', {}, h('p', { class: 'fraco' }, 'Sem votação nominal em plenário no período. Votações simbólicas não registram o voto de cada parlamentar.')));
+      raiz.scrollTop = 0;
+    },
+
     pessoa(id) {
       const p = dados.pessoaPorId.get(id);
       const desde = fmtData(p.desde);
@@ -276,6 +333,7 @@ export function criarPainel(raiz, dados, { aoEscolherPessoa, aoEscolherUf, aoVer
         blocoDestino(p, dados),
         blocoEspectro(p, dados),
         blocoVotos(p, dados),
+        blocoPecs(p),
         blocoNoticias(p, dados),
         links.length ? h('section', {}, h('h3', {}, 'Mais sobre'),
           h('ul', { class: 'buscas' }, links.map(([r, u]) =>

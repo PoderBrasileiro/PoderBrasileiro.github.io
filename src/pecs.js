@@ -1,0 +1,62 @@
+// Aba de PECs: lista das propostas de emenda à Constituição com o estágio em
+// cada casa e o placar da votação nominal mais recente.
+
+import { h, trocar, fmtData } from './comum.js';
+
+// O Senado registra o motivo de quem não votou em siglas próprias.
+export const ROTULO_VOTO = {
+  Sim: 'Sim', 'Não': 'Não', 'Abstenção': 'Abstenção', 'Obstrução': 'Obstrução',
+  'Artigo 17': 'Presidente da sessão (não vota)',
+  'Presidente (art. 51 RISF)': 'Presidente da sessão (não vota)',
+  'P-NRV': 'Presente, não registrou voto',
+  AP: 'Ausente em atividade parlamentar',
+  MIS: 'Ausente em missão',
+  LS: 'Licença saúde',
+  LP: 'Licença particular',
+  NCom: 'Não compareceu',
+  NA: 'Não anotado',
+};
+const ORDEM = ['Sim', 'Não', 'Abstenção', 'Obstrução'];
+export const tiposDeVoto = (votos) => Object.keys(votos)
+  .sort((a, b) => (ORDEM.indexOf(a) + 1 || 99) - (ORDEM.indexOf(b) + 1 || 99) || votos[b].length - votos[a].length);
+
+export const placarCurto = (v) => `Sim ${v.placar.Sim ?? 0} · Não ${v.placar['Não'] ?? 0}`;
+
+export function estagioCurto(pec) {
+  const e = pec.estagio;
+  if (e.situacao) return `${e.situacao}${e.orgao ? ` (${e.orgao})` : ''}`;
+  const v = pec.votacoes[0];
+  return v ? `Última votação em plenário: ${v.resultado ?? 'sem resultado informado'}` : 'Sem situação informada';
+}
+
+export function criarPecs(raiz, dados, { aoEscolherPec }) {
+  const lista = h('div', { class: 'pecs' });
+  const soNominais = h('input', { type: 'checkbox', checked: true });
+  const filtro = h('label', { class: 'pecs-filtro' }, soNominais, ' Só as que tiveram votação nominal em plenário');
+  const aviso = h('p', { class: 'fraco' }, 'Carregando…');
+  raiz.append(aviso, filtro, lista);
+
+  function desenhar() {
+    const d = dados.pecs;
+    if (d === undefined) return;
+    if (!d) { aviso.textContent = 'Dados de PECs indisponíveis. Rode "npm run pecs".'; filtro.hidden = true; return; }
+    aviso.textContent = `PECs com movimento desde ${fmtData(d.de)}, segundo os dados abertos da Câmara e do Senado. Cada casa numera e informa a PEC do seu jeito, então a mesma proposta pode aparecer duas vezes — uma por casa.`;
+    const visiveis = d.pecs.filter((p) => !soNominais.checked || p.votacoes.length);
+    trocar(lista, visiveis.map((p) => {
+      const v = p.votacoes[0];
+      return h('button', { class: 'pec', 'data-pec': p.id, onclick: () => aoEscolherPec(p.id) },
+        h('span', { class: 'pec-topo' }, h('b', {}, p.titulo), h('span', { class: 'selo' }, p.casa)),
+        h('span', { class: 'pec-ementa' }, p.ementa),
+        h('small', {}, estagioCurto(p)),
+        v ? h('small', {}, `${fmtData(v.data)} · ${placarCurto(v)}${v.resultado ? ` · ${v.resultado}` : ''}`) : null);
+    }));
+  }
+  soNominais.addEventListener('change', desenhar);
+
+  return {
+    atualizar: desenhar,
+    selecionar({ pec }) {
+      for (const el of lista.children) el.classList.toggle('ativa', el.dataset.pec === pec);
+    },
+  };
+}
