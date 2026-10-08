@@ -49,11 +49,12 @@ const brasil = JSON.parse(await readFile(new URL('public/data/brasil.json', RAIZ
 const posicaoDe = (p) => (p.partido ? tabelaPartidos.partidos[p.partido]?.posicao ?? null : null);
 const prefeitos = JSON.parse(await readFile(new URL('public/data/prefeitos.json', RAIZ), 'utf8').catch(() => '{"porUf":{}}'));
 const todosPrefeitos = Object.values(prefeitos.porUf).flat().filter((m) => !m.pendente);
-const doCargo = (cargo) => (cargo === 'prefeito' ? todosPrefeitos : brasil.pessoas.filter((p) => p.cargo === cargo))
-  .sort((a, b) => (posicaoDe(a) ?? 99) - (posicaoDe(b) ?? 99));
+const ordenar = (gente) => [...gente].sort((a, b) => (posicaoDe(a) ?? 99) - (posicaoDe(b) ?? 99));
+const doCargo = (cargo) => ordenar(cargo === 'prefeito' ? todosPrefeitos : brasil.pessoas.filter((p) => p.cargo === cargo));
+export const balanco = (cargo) => contar(doCargo(cargo));
+const eleicao = JSON.parse(await readFile(new URL('public/data/eleicao2026.json', RAIZ), 'utf8').catch(() => 'null'));
 
-export function balanco(cargo) {
-  const gente = doCargo(cargo);
+export function contar(gente) {
   const pos = gente.map(posicaoDe).filter((x) => x != null);
   const esq = pos.filter((x) => x < 5).length;
   const dir = pos.filter((x) => x > 5).length;
@@ -72,34 +73,69 @@ const CASA = {
   deputado: { titulo: 'Câmara dos Deputados', linhas: 11, nota: '513 cadeiras · proporcional à população' },
 };
 
-export function cartaoComposicao(cargo) {
+// Desenha um plenário em semicírculo com qualquer lista de gente. Serve tanto
+// pra composição de hoje quanto pra projetada de 2027.
+function cartaoPlenario({ titulo, subtitulo, gente, linhas, raioBola, rodape }) {
   const L = 1200, A = 675;
-  const casa = CASA[cargo];
-  const b = balanco(cargo);
-  const lugares = assentos(b.gente.length, casa.linhas);
+  const b = contar(gente);
+  const lugares = assentos(gente.length, linhas);
   // Caixa do semicírculo: encostada embaixo, deixando o texto no topo.
   const cx = L / 2, base = A - 118, raio = 350;
-  const bolas = b.gente.map((p, i) => {
+  const bolas = ordenar(gente).map((p, i) => {
     const l = lugares[i];
-    const x = cx + (l.x - 0.5) * 2 * raio;
-    const y = base - (1 - l.y) * raio;
-    return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${cargo === 'senador' ? 11 : 6.2}" fill="${corDaPosicao(posicaoDe(p))}"/>`;
+    return `<circle cx="${(cx + (l.x - 0.5) * 2 * raio).toFixed(1)}" cy="${(base - (1 - l.y) * raio).toFixed(1)}" r="${raioBola}" fill="${corDaPosicao(posicaoDe(p))}"/>`;
   }).join('');
-
   const svg = [
     `<rect width="${L}" height="${A}" fill="${COR.fundo}"/>`,
     marca(54, 58, 13),
     txt(104, 50, 'PoderBR', { tam: 27, peso: 'bold' }),
     txt(104, 78, 'poderbrasileiro.github.io', { tam: 19, cor: COR.texto3 }),
-    txt(L / 2, 150, `${casa.titulo} hoje`, { tam: 54, peso: 'bold', ancora: 'middle' }),
-    txt(L / 2, 196, `${b.esq}% esquerda · ${b.dir}% direita`, { tam: 36, cor: COR.texto2, ancora: 'middle' }),
+    txt(L / 2, 150, titulo, { tam: 54, peso: 'bold', ancora: 'middle' }),
+    txt(L / 2, 196, subtitulo, { tam: 36, cor: COR.texto2, ancora: 'middle' }),
     bolas,
-    txt(cx, base - 26, String(b.gente.length), { tam: 64, peso: 'bold', ancora: 'middle' }),
+    txt(cx, base - 26, String(gente.length), { tam: 64, peso: 'bold', ancora: 'middle' }),
     txt(cx, base + 10, 'cadeiras', { tam: 22, cor: COR.texto3, ancora: 'middle' }),
     txt(L / 2, A - 58, 'Cada cadeira é uma pessoa, da esquerda para a direita pela posição do partido.', { tam: 20, cor: COR.texto3, ancora: 'middle' }),
-    txt(L / 2, A - 30, `${casa.nota} · classificação de partidos de Bolognesi, Ribeiro e Codato (2023)`, { tam: 20, cor: COR.texto3, ancora: 'middle' }),
+    txt(L / 2, A - 30, rodape, { tam: 20, cor: COR.texto3, ancora: 'middle' }),
   ].join('');
-  return { png: png(svg, L, A), balanco: b, titulo: casa.titulo };
+  return { png: png(svg, L, A), balanco: b, titulo };
+}
+
+export function cartaoComposicao(cargo) {
+  const casa = CASA[cargo];
+  const gente = doCargo(cargo);
+  return cartaoPlenario({
+    titulo: `${casa.titulo} hoje`,
+    subtitulo: `${contar(gente).esq}% esquerda · ${contar(gente).dir}% direita`,
+    gente, linhas: casa.linhas, raioBola: cargo === 'senador' ? 11 : 6.2,
+    rodape: `${casa.nota} · classificação de partidos de Bolognesi, Ribeiro e Codato (2023)`,
+  });
+}
+
+// ---------- como a casa fica depois da posse ----------
+
+// Senado 2027: os 54 eleitos em 2026 mais os 27 cujo mandato vai até 2031.
+// Câmara 2027: os 513 eleitos, que trocam todos de uma vez.
+export function cartaoFuturo(cargo) {
+  const eleitos = Object.values(eleicao?.porUf ?? {}).flatMap((u) => (cargo === 'senador' ? u.senadores : u.deputados));
+  const continuam = cargo === 'senador'
+    ? brasil.pessoas.filter((p) => p.cargo === 'senador' && p.mandatoAte && p.mandatoAte > '2028')
+    : [];
+  const gente = [...continuam, ...eleitos];
+  const casa = CASA[cargo];
+  const b = contar(gente);
+  const hoje = contar(doCargo(cargo));
+  return {
+    ...cartaoPlenario({
+      titulo: `${casa.titulo} em 2027`,
+      subtitulo: `${b.esq}% esquerda · ${b.dir}% direita`,
+      gente, linhas: casa.linhas, raioBola: cargo === 'senador' ? 11 : 6.2,
+      rodape: cargo === 'senador'
+        ? `54 eleitos em 2026 e 27 com mandato até 2031 · hoje: ${hoje.esq}% e ${hoje.dir}%`
+        : `Os 513 eleitos em 2026 · hoje: ${hoje.esq}% esquerda e ${hoje.dir}% direita`,
+    }),
+    hoje,
+  };
 }
 
 // ---------- cartão do site ----------
@@ -160,6 +196,37 @@ export function cartaoBarra(cargo) {
 }
 
 export const cartaoDoGrupo = (cargo) => (cargo === 'senador' || cargo === 'deputado' ? cartaoComposicao(cargo) : cartaoBarra(cargo));
+
+
+// ---------- cartão de contagem regressiva ----------
+
+export function cartaoContagem() {
+  const L = 1200, A = 675;
+  const p = eleicao?.presidente;
+  if (!eleicao || p?.status !== 'segundo-turno') return null;
+  const [d, m] = eleicao.segundoTurnoEm.split('/');
+  const ano = new Date(eleicao.geradoEm).getFullYear();
+  const alvo = new Date(`${ano}-${m}-${d}T08:00:00-03:00`);
+  const dias = Math.ceil((alvo - Date.now()) / 864e5);
+  const MES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+  const chapas = p.candidatos.map((c, i) => [
+    `<circle cx="${330 + i * 540}" cy="465" r="13" fill="${corDaPosicao(posicaoDe(c))}"/>`,
+    txt(360 + i * 540, 458, `${c.nome} (${c.partido})`, { tam: 29, peso: 'bold' }),
+    txt(360 + i * 540, 492, `${c.pct}% no 1º turno`, { tam: 22, cor: COR.texto3 }),
+  ].join('')).join('');
+  const svg = [
+    `<rect width="${L}" height="${A}" fill="${COR.fundo}"/>`,
+    marca(54, 58, 13),
+    txt(104, 50, 'PoderBR', { tam: 27, peso: 'bold' }),
+    txt(104, 78, 'poderbrasileiro.github.io', { tam: 19, cor: COR.texto3 }),
+    txt(L / 2, 230, String(dias), { tam: 150, peso: 'bold', ancora: 'middle' }),
+    txt(L / 2, 285, dias === 1 ? 'dia para o 2º turno' : 'dias para o 2º turno', { tam: 40, cor: COR.texto2, ancora: 'middle' }),
+    txt(L / 2, 336, `${Number(d)} de ${MES[Number(m) - 1]} · urnas das 8h às 17h`, { tam: 26, cor: COR.texto3, ancora: 'middle' }),
+    chapas,
+    txt(L / 2, A - 40, 'Quem fica e quem sai do poder em 2027, estado por estado', { tam: 22, cor: COR.texto3, ancora: 'middle' }),
+  ].join('');
+  return { png: png(svg, L, A), dias, candidatos: p.candidatos, quando: `${Number(d)} de ${MES[Number(m) - 1]}` };
+}
 
 // ---------- banner do X ----------
 

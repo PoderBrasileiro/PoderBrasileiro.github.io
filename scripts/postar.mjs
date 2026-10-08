@@ -29,6 +29,8 @@ const TAMANHO_LINK = 23;   // o X conta qualquer link como 23 caracteres
 const ler = async (caminho, padrao) => {
   try { return JSON.parse(await readFile(new URL(caminho, RAIZ), 'utf8')); } catch { return padrao; }
 };
+// O X conta qualquer link como 23 caracteres, não pelo tamanho real dele.
+const contarComoNoX = (texto) => [...texto.replace(/https?:\/\/\S+/g, 'x'.repeat(TAMANHO_LINK))].length;
 const dataBr = (iso) => iso.slice(0, 10).split('-').reverse().join('/');
 const comPartido = (c) => `${c.nome} (${c.partido ?? 'sem partido'})`;
 
@@ -281,8 +283,57 @@ async function retratoDoDia() {
   };
 }
 
+// Os quatro posts de estreia, feitos uma vez só. Entram na pauta como
+// qualquer outro item, pra sair pelo mesmo caminho.
+async function postsDeEstreia() {
+  const { cartaoFuturo, cartaoContagem, cartaoDoGrupo } = await import('./imagens.mjs');
+  const itens = [];
+
+  // 1. O fixado: o que é o site.
+  const capa = cartaoDoGrupo('senador');
+  itens.push({
+    id: 'estreia:fixado', data: hoje, fixar: true,
+    texto: montar('Quem ocupa o poder no Brasil, num quadro só: presidente, ministros, STF, governadores, senadores, deputados e os prefeitos das 5.569 cidades.',
+      'Dados públicos, atualizados todo dia. Sem vínculo com governo ou partido.',
+      SITE, ['#Brasil', '#Congresso']),
+    imagem: { png: capa.png, arquivo: 'estreia-capa.png', alt: `Gráfico do Senado Federal: 81 cadeiras em semicírculo, uma por senador, da esquerda (vermelho) para a direita (azul) pela posição do partido.` },
+  });
+
+  // 2 e 3. Como cada casa fica depois da posse.
+  for (const cargo of ['senador', 'deputado']) {
+    const f = cartaoFuturo(cargo);
+    const delta = f.balanco.dir - f.hoje.dir;
+    const mudou = delta === 0
+      ? 'Praticamente o mesmo de hoje.'
+      : `${delta > 0 ? 'Mais' : 'Menos'} à direita que hoje, que está em ${f.hoje.dir}%.`;
+    itens.push({
+      id: `estreia:2027-${cargo}`, data: hoje,
+      texto: montar(`${f.titulo}: ${f.balanco.dir}% de direita e ${f.balanco.esq}% de esquerda a partir de fevereiro de 2027.`,
+        `${mudou} ${cargo === 'senador' ? 'São 54 eleitos em 2026 mais 27 com mandato até 2031.' : 'Os 513 trocam de uma vez.'} Cadeira por cadeira:`,
+        `${SITE}#rede`, cargo === 'senador' ? ['#Senado', '#Eleições2026'] : ['#Câmara', '#Eleições2026']),
+      imagem: { png: f.png, arquivo: `2027-${cargo}.png`, alt: `Gráfico — ${f.titulo}: ${f.balanco.gente.length} cadeiras em semicírculo, da esquerda (vermelho) para a direita (azul) pela posição do partido. ${f.balanco.esq}% de esquerda e ${f.balanco.dir}% de direita.` },
+    });
+  }
+
+  // 4. Quanto falta pro 2º turno.
+  const c = cartaoContagem();
+  if (c) {
+    itens.push({
+      id: `estreia:contagem-${hoje}`, data: hoje,
+      texto: montar(`Faltam ${c.dias} dias para o 2º turno, em ${c.quando}.`,
+        `${c.candidatos.map((x) => `${x.nome} (${x.partido}) ${x.pct}%`).join(' e ')} no 1º turno. No site dá pra ver quem fica e quem sai do poder em 2027, estado por estado:`,
+        `${SITE}#rede`, ['#Eleições2026', '#SegundoTurno']),
+      imagem: { png: c.png, arquivo: 'contagem.png', alt: `Cartão: faltam ${c.dias} dias para o 2º turno, em ${c.quando}. ${c.candidatos.map((x) => `${x.nome} do ${x.partido} teve ${x.pct}%`).join(' e ')} no 1º turno.` },
+    });
+  }
+  return itens;
+}
+
 const pauta = fila.slice(0, MAX_POR_RODADA);
-if (!pauta.length) {
+if (process.argv.includes('--estreia')) {
+  pauta.length = 0;
+  pauta.push(...await postsDeEstreia());
+} else if (!pauta.length) {
   console.log('Sem novidade hoje.');
   const r = await retratoDoDia().catch((e) => { console.error(`retrato falhou: ${e.message}`); return null; });
   if (r) pauta.push(r);
@@ -313,8 +364,8 @@ if (process.argv.includes('--relatorio')) {
     linhas.push('Nada para postar hoje.', '', `Último retrato: ${estado.composicao.quando ?? '—'}. O próximo sai ${DIAS_ENTRE_RETRATOS} dias depois dele.`);
   }
   for (const [n, item] of itens.entries()) {
-    const tipo = { retrato: 'Retrato do dia', pec: 'Votação de PEC', etapa: 'PEC avançou', troca: 'Troca de cargo', '2turno': 'Resultado do 2º turno' }[item.id.split(':')[0]] ?? item.id.split(':')[0];
-    linhas.push(`## ${n + 1}. ${tipo}`, '', `${[...item.texto].length} de 280 caracteres`, '', '~~~', item.texto, '~~~', '');
+    const tipo = { retrato: 'Retrato do dia', pec: 'Votação de PEC', etapa: 'PEC avançou', troca: 'Troca de cargo', '2turno': 'Resultado do 2º turno', estreia: 'Estreia' }[item.id.split(':')[0]] ?? item.id.split(':')[0];
+    linhas.push(`## ${n + 1}. ${tipo}${item.fixar ? ' — fixe este no perfil' : ''}`, '', `${contarComoNoX(item.texto)} de 280 caracteres (o X conta todo link como 23)`, '', '~~~', item.texto, '~~~', '');
     if (item.imagem) {
       await writeFile(new URL(`public/cartoes/${item.imagem.arquivo}`, RAIZ), item.imagem.png);
       linhas.push(`**Imagem:** ${SITE}cartoes/${item.imagem.arquivo}` + ' — abra o link e salve a imagem.', '',
