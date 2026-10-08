@@ -33,9 +33,12 @@ const css = (nome) => getComputedStyle(document.documentElement).getPropertyValu
 
 // Divergente: vermelho (esquerda) — cinza neutro — azul (direita), com 5 no
 // meio da régua. As cores saem do CSS pra acompanhar tema claro/escuro.
+// A cor satura em 2 e em 8, não em 0 e 10: nenhum partido com gente em cargo
+// chega perto das pontas da régua, e no domínio inteiro tudo saía cinzento.
+// O 5 continua sendo o cinza do meio, e o número exato está sempre na ficha.
 export function escalaEspectro() {
   return d3.scaleLinear()
-    .domain([0, 5, 10])
+    .domain([2, 5, 8])
     .range([css('--esq'), css('--meio'), css('--dir')])
     .interpolate(d3.interpolateRgb)
     .clamp(true);

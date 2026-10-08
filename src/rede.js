@@ -10,13 +10,38 @@ import { h, CARGOS, SITUACOES, destinoDe, posicaoDe, mostrarDica, esconderDica, 
 
 const DIAMETRO = { presidente: 30, vice: 24, ministro: 16, governador: 20, senador: 14, deputado: 10, stf: 20 };
 
+// Assentos de um plenário em semicírculo, como os infográficos de jornal.
+// Devolve pontos em fração da caixa (x de 0 a 1, y de 0 a 1, com a base
+// embaixo), já ordenados da esquerda para a direita de quem olha.
+function assentos(n, linhas) {
+  const DENTRO = 0.52;   // o vão central é o que dá a forma de ferradura
+  const raios = Array.from({ length: linhas }, (_, i) => DENTRO + (1 - DENTRO) * (i / (linhas - 1)));
+  const soma = raios.reduce((a, b) => a + b, 0);
+  // Linha de fora comporta mais gente: cadeiras proporcionais ao raio.
+  const porLinha = raios.map((r) => Math.max(1, Math.round((n * r) / soma)));
+  let resto = n - porLinha.reduce((a, b) => a + b, 0);
+  for (let i = linhas - 1, voltas = 0; resto !== 0 && voltas < n + linhas; i = (i - 1 + linhas) % linhas, voltas++) {
+    if (resto > 0) { porLinha[i]++; resto--; } else if (porLinha[i] > 1) { porLinha[i]--; resto++; }
+  }
+  const pontos = [];
+  raios.forEach((r, i) => {
+    for (let j = 0; j < porLinha[i]; j++) {
+      const ang = Math.PI * (1 - (j + 0.5) / porLinha[i]);
+      pontos.push({ ang, x: 0.5 + 0.5 * r * Math.cos(ang), y: 1 - r * Math.sin(ang) });
+    }
+  });
+  return pontos.sort((a, b) => b.ang - a.ang);
+}
+
 export function criarRede(raiz, dados, { aoEscolherPessoa, aoVerMapa }) {
   const bolinhas = [];   // { el, pessoa }
 
-  function bolinha(p) {
+  let ordem = 0;   // só pro atraso em cascata da animação de entrada
+
+  function bolinha(p, estilo = '') {
     const d = DIAMETRO[p.cargo];
     const el = h('button', {
-      class: 'b', style: `width:${d}px;height:${d}px`,
+      class: 'b', style: `width:${d}px;height:${d}px;--i:${ordem++};${estilo}`,
       'aria-label': `${p.nome}, ${CARGOS[p.cargo].curto}, ${ondeAtua(p, dados)}, ${textoPartido(p)}`,
       onclick: () => aoEscolherPessoa(p.id),
       'data-sit': destinoDe(p, dados)?.situacao,
@@ -39,7 +64,17 @@ export function criarRede(raiz, dados, { aoEscolherPessoa, aoVerMapa }) {
 
   const grupo = (titulo, conteudo, nota) => h('div', { class: 'q-grupo' },
     h('h4', {}, titulo), conteudo, nota ? h('p', { class: 'q-nota' }, nota) : null);
-  const nuvem = (cargo) => h('div', { class: 'q-nuvem' }, doCargo(cargo).map(bolinha));
+  const nuvem = (cargo) => h('div', { class: 'q-nuvem' }, doCargo(cargo).map((p) => bolinha(p)));
+
+  // Plenário em semicírculo: cada cadeira é uma pessoa, da esquerda para a
+  // direita conforme a posição do partido.
+  function plenario(cargo, linhas) {
+    const gente = doCargo(cargo);
+    const lugares = assentos(gente.length, linhas);
+    return h('div', { class: `q-plenario q-plenario-${cargo}` },
+      gente.map((p, i) => bolinha(p, `left:${(lugares[i].x * 100).toFixed(2)}%;top:${(lugares[i].y * 100).toFixed(2)}%`)),
+      h('span', { class: 'q-total' }, gente.length));
+  }
   const fora = (titulo, texto) => h('div', { class: 'q-grupo q-fora' }, h('h4', {}, titulo), h('p', { class: 'q-nota' }, texto));
 
   const n = (cargo) => dados.pessoas.filter((p) => p.cargo === cargo).length;
@@ -78,8 +113,8 @@ export function criarRede(raiz, dados, { aoEscolherPessoa, aoVerMapa }) {
             comNome(dados.pessoaPorId.get('vice'), `${dados.pessoaPorId.get('vice').nome} · vice`))),
         grupo(`Ministros (${n('ministro')})`, nuvem('ministro'))),
       celula(
-        grupo(`Senado (${n('senador')})`, nuvem('senador'), '3 senadores por estado'),
-        grupo(`Câmara dos Deputados (${n('deputado')})`, nuvem('deputado'), 'bancada proporcional à população do estado')),
+        grupo(`Senado (${n('senador')})`, plenario('senador', 4), '3 senadores por estado. Cada cadeira é uma pessoa, da esquerda para a direita.'),
+        grupo(`Câmara dos Deputados (${n('deputado')})`, plenario('deputado', 11), 'bancada proporcional à população do estado')),
       celula(
         grupo(`Supremo Tribunal Federal (${stf.length} de 11)`,
           h('div', { class: 'q-destaques q-stf' }, stf.map((p) => comNome(p, p.funcao ? `${p.nome} · ${p.funcao}` : p.nome))),

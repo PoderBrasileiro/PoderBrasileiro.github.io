@@ -11,6 +11,7 @@
   <meta property="og:description" content="Mapa, três poderes, votos em PECs e a transição para 2027, com dados públicos.">
   <meta name="twitter:card" content="summary">
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <script>try{var t=localStorage.getItem("tema");if(t==="claro"||t==="escuro")document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
   <link rel="stylesheet" href="/src/style.css">
 </head>
 <body>
@@ -30,6 +31,11 @@
       <button role="tab" data-aba="lista" aria-selected="false">Lista</button>
       <button role="tab" data-aba="pecs" aria-selected="false">PECs</button>
     </nav>
+    <div class="tema" role="group" aria-label="Tema">
+      <button data-tema="claro" title="Tema claro" aria-pressed="false">☀</button>
+      <button data-tema="sistema" title="Seguir o sistema" aria-pressed="true">◐</button>
+      <button data-tema="escuro" title="Tema escuro" aria-pressed="false">☾</button>
+    </div>
   </header>
 
   <main class="palco">

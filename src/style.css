@@ -9,13 +9,17 @@
   --destaque: #0b0b0b;
   /* régua esquerda–direita: dois polos e um meio neutro, nunca uma cor no meio */
   --esq: #c93a3a;
-  --meio: #e4e2dc;
+  --meio: #94908a;
   --dir: #2a6fc9;
   --aviso-fundo: #fdf3d6;
   --aviso-borda: #e0b93a;
 }
+/* Tema escuro em dois lugares de propósito: o @media atende quem não mexeu na
+   chave (e o :not deixa a escolha "claro" vencer o sistema), e o [data-theme]
+   atende quem escolheu escuro na mão. */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="claro"]) {
+    color-scheme: dark;
     --fundo: #1a1a19;
     --fundo-2: #262624;
     --borda: #3a3a37;
@@ -24,12 +28,28 @@
     --texto-3: #8f8e86;
     --destaque: #ffffff;
     --esq: #e05252;
-    --meio: #4a4a46;
+    --meio: #6b6b64;
     --dir: #4a90e8;
     --aviso-fundo: #3a3114;
     --aviso-borda: #a58420;
   }
 }
+:root[data-theme="escuro"] {
+  color-scheme: dark;
+  --fundo: #1a1a19;
+  --fundo-2: #262624;
+  --borda: #3a3a37;
+  --texto: #ffffff;
+  --texto-2: #c3c2b7;
+  --texto-3: #8f8e86;
+  --destaque: #ffffff;
+  --esq: #e05252;
+  --meio: #6b6b64;
+  --dir: #4a90e8;
+  --aviso-fundo: #3a3114;
+  --aviso-borda: #a58420;
+}
+:root[data-theme="claro"] { color-scheme: light; }
 
 * { box-sizing: border-box; }
 html, body { height: 100%; }
@@ -240,9 +260,9 @@ button.prefeito-linha:hover { background: var(--fundo-2); }
 
 /* ---------- rede de poder (quadro dos três poderes) ---------- */
 #vis-rede { overflow: auto; }
-.quadro { display: flex; flex-direction: column; gap: 10px; min-width: 760px; }
+.quadro { display: flex; flex-direction: column; gap: 10px; min-width: 880px; }
 .q-raiz { align-self: center; padding: 6px 18px; border: 1px solid var(--borda); border-radius: 999px; font-weight: 700; letter-spacing: -0.01em; }
-.q-grade { display: grid; grid-template-columns: 92px repeat(3, minmax(0, 1fr)); gap: 8px; }
+.q-grade { display: grid; grid-template-columns: 92px minmax(0, 1fr) minmax(0, 1.7fr) minmax(0, 1fr); gap: 8px; }
 .q-poder { padding: 8px 12px; border-bottom: 3px solid var(--texto); display: flex; flex-direction: column; line-height: 1.25; }
 .q-poder b { font-size: 16px; }
 .q-poder small, .q-nivel small { color: var(--texto-2); font-size: 12px; }
@@ -300,3 +320,37 @@ button.prefeito-linha:hover { background: var(--fundo-2); }
 .votante { padding: 1px 7px; border: 1px solid var(--borda); border-radius: 999px; background: none; font-size: 12px; }
 button.votante:hover { background: var(--fundo-2); }
 span.votante { color: var(--texto-2); border-style: dashed; }
+
+/* ---------- plenário em semicírculo ---------- */
+.q-plenario { position: relative; width: 100%; aspect-ratio: 2 / 1.08; align-self: stretch; }
+.q-plenario .b { position: absolute; transform: translate(-50%, -50%); border-width: 1px; }
+/* O hover cresce a bolinha e a traz pra frente, senão some no meio das outras. */
+.q-plenario .b:hover, .q-plenario .b.ativo { transform: translate(-50%, -50%) scale(1.9); z-index: 2; }
+.q-plenario-deputado .b { width: 7px !important; height: 7px !important; }
+.q-total {
+  position: absolute; left: 50%; bottom: 2%; transform: translateX(-50%);
+  font-size: clamp(18px, 7cqw, 30px); font-weight: 700; font-variant-numeric: tabular-nums; color: var(--texto);
+}
+.q-grupo { container-type: inline-size; align-self: stretch; }
+
+/* ---------- movimento ---------- */
+@keyframes surgir { from { opacity: 0; transform: translateY(6px); } }
+@keyframes brotar { from { opacity: 0; transform: translate(-50%, -50%) scale(0.2); } }
+@keyframes brotar-fixo { from { opacity: 0; transform: scale(0.2); } }
+.aba-conteudo:not([hidden]) { animation: surgir 0.3s ease-out both; }
+.painel > * { animation: surgir 0.26s ease-out both; }
+/* Cascata curta: o olho lê como "o plenário se preenchendo", não como espera. */
+.q-plenario .b { animation: brotar 0.4s ease-out both; animation-delay: calc(var(--i) * 1.1ms); }
+.q-nuvem .b { animation: brotar-fixo 0.35s ease-out both; animation-delay: calc(var(--i) * 4ms); }
+.uf, .municipio { transition: fill 0.35s ease, opacity 0.12s; }
+.b { transition: opacity 0.25s ease, transform 0.15s ease, border-color 0.15s ease; }
+.regua-marca { transition: left 0.4s cubic-bezier(0.22, 1, 0.36, 1); }
+.cartao, .pec, .federal-item, .ufs button { transition: background 0.15s ease, border-color 0.15s ease; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-delay: 0ms !important; transition-duration: 0.01ms !important; }
+}
+
+/* ---------- chave de tema ---------- */
+.tema { display: flex; gap: 2px; padding: 3px; background: var(--fundo-2); border-radius: 10px; }
+.tema button { width: 30px; height: 28px; padding: 0; border: 0; border-radius: 8px; background: none; color: var(--texto-2); font-size: 14px; line-height: 1; }
+.tema button[aria-pressed="true"] { background: var(--fundo); color: var(--texto); box-shadow: 0 1px 2px rgb(0 0 0 / 0.15); }

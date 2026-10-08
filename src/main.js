@@ -68,6 +68,18 @@ function pintar() {
 }
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change', pintar);
 
+// Chave de tema. "sistema" é o padrão e não grava nada; as outras duas ficam
+// guardadas no navegador. As cores das visualizações saem do CSS, então
+// qualquer troca precisa repintar.
+function aplicarTema(tema) {
+  if (tema === 'sistema') document.documentElement.removeAttribute('data-theme');
+  else document.documentElement.setAttribute('data-theme', tema);
+  for (const b of document.querySelectorAll('.tema button')) b.setAttribute('aria-pressed', String(b.dataset.tema === tema));
+  try { if (tema === 'sistema') localStorage.removeItem('tema'); else localStorage.setItem('tema', tema); } catch { /* modo privado */ }
+  pintar();
+}
+for (const b of document.querySelectorAll('.tema button')) b.addEventListener('click', () => aplicarTema(b.dataset.tema));
+
 function desenharLegenda() {
   const aba = document.querySelector('.abas [aria-selected="true"]').dataset.aba;
   const el = document.getElementById('legenda');
@@ -162,7 +174,7 @@ document.getElementById('metodologia').append(
   h('h4', {}, 'Esquerda × direita'),
   h('p', {}, 'Não existe medida oficial. O site mostra duas coisas separadas e diz qual é qual:'),
   h('ul', {},
-    h('li', {}, h('b', {}, 'Posição do partido: '), dados.fontePartidos, ' A porcentagem é só essa nota convertida (nota 7 = 70% direita). Vale para o partido inteiro, não para a pessoa.'),
+    h('li', {}, h('b', {}, 'Posição do partido: '), dados.fontePartidos, ' A porcentagem é só essa nota convertida (nota 7 = 70% direita). Vale para o partido inteiro, não para a pessoa. Nas cores, o vermelho e o azul cheios aparecem a partir de 2 e de 8: no intervalo todo, como nenhum partido com gente em cargo chega perto das pontas, tudo sairia cinzento.'),
     h('li', {}, h('b', {}, 'Voto no plenário (só senadores): '), `nas votações nominais em que a maioria do ${dados.votos.poloEsquerda} e a maioria do ${dados.votos.poloDireita} ficaram em lados opostos, de que lado o senador votou. Mede alinhamento de voto, não ideologia.`)),
   h('h4', {}, 'Investigações e notícias'),
   h('p', {}, 'O site não afirma nada sobre ninguém: só reúne links. As listas são geradas por busca automática pelo nome, sem revisão humana, e erram — homônimos e simples citações aparecem. Investigado, réu e condenado são situações jurídicas diferentes, e só a fonte original diz qual é o caso.'));
@@ -196,7 +208,9 @@ carregar('prefeitos.json').then((prefeitos) => {
   if (selecaoAtual.uf && !selecaoAtual.pessoa) painel.uf(selecaoAtual.uf);
 });
 
-pintar();
+let temaSalvo = null;
+try { temaSalvo = localStorage.getItem('tema'); } catch { /* modo privado */ }
+aplicarTema(temaSalvo === 'claro' || temaSalvo === 'escuro' ? temaSalvo : 'sistema');
 painel.resumo();
 const inicial = location.hash.slice(1);
 if (['rede', 'lista', 'pecs'].includes(inicial)) abrirAba(inicial);
