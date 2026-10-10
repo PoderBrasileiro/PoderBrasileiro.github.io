@@ -110,8 +110,8 @@
   "camara-2262083": "plenario"
  },
  "composicao": {
-  "cargo": "senador",
-  "quando": "2026-10-08"
+  "cargo": "deputado",
+  "quando": "2026-10-10"
  },
  "feitos": {
   "x": [
@@ -272,7 +272,8 @@
    "estreia:fixado",
    "estreia:2027-senador",
    "estreia:2027-deputado",
-   "estreia:contagem-2026-10-08"
+   "estreia:contagem-2026-10-08",
+   "retrato:deputado:2026-10-10"
   ]
  }
 }
