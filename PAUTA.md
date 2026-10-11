@@ -1,21 +1,19 @@
-# Pauta de 10/10/2026
+# Pauta de 11/10/2026
 
 Mais fácil pela página: https://poderbrasileiro.github.io/pauta/
 
-## 1. Retrato do dia
+## 1. Resultado do 2º turno
 
-191 de 280 caracteres (o X conta todo link como 23)
+206 de 280 caracteres (o X conta todo link como 23)
 
 ```
-Câmara dos Deputados hoje hoje: 76% de direita e 24% de esquerda.
+2º turno — Governo de RJ: eleito(a) Douglas Ruas (PL), com 50,88% dos votos válidos.
 
-Contagem de cabeças pela posição do partido, entre os 513 com partido conhecido.
+Vice: Fernanda Louback.
 
-https://poderbrasileiro.github.io/c/deputado.html
-#Câmara #Congresso
+Quem fica e quem sai em 2027: https://poderbrasileiro.github.io/#rede
+#Eleições2026 #SegundoTurno #RiodeJaneiro
 ```
-
-A imagem entra sozinha pela prévia do link; não precisa anexar.
 
 ---
 

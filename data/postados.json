@@ -50,7 +50,6 @@
   "2turno:governador:AM": true,
   "2turno:governador:DF": true,
   "2turno:governador:ES": true,
-  "2turno:governador:RJ": true,
   "2turno:governador:RN": true,
   "2turno:governador:TO": true
  },
@@ -273,7 +272,8 @@
    "estreia:2027-senador",
    "estreia:2027-deputado",
    "estreia:contagem-2026-10-08",
-   "retrato:deputado:2026-10-10"
+   "retrato:deputado:2026-10-10",
+   "2turno:governador:RJ"
   ]
  }
 }
