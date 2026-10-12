@@ -109,8 +109,8 @@
   "camara-2262083": "plenario"
  },
  "composicao": {
-  "cargo": "deputado",
-  "quando": "2026-10-10"
+  "cargo": "governador",
+  "quando": "2026-10-12"
  },
  "feitos": {
   "x": [
@@ -273,7 +273,8 @@
    "estreia:2027-deputado",
    "estreia:contagem-2026-10-08",
    "retrato:deputado:2026-10-10",
-   "2turno:governador:RJ"
+   "2turno:governador:RJ",
+   "retrato:governador:2026-10-12"
   ]
  }
 }

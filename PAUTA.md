@@ -1,19 +1,21 @@
-# Pauta de 11/10/2026
+# Pauta de 12/10/2026
 
 Mais fácil pela página: https://poderbrasileiro.github.io/pauta/
 
-## 1. Resultado do 2º turno
+## 1. Retrato do dia
 
-206 de 280 caracteres (o X conta todo link como 23)
+180 de 280 caracteres (o X conta todo link como 23)
 
 ```
-2º turno — Governo de RJ: eleito(a) Douglas Ruas (PL), com 50,88% dos votos válidos.
+Governadores hoje: 85% de direita e 15% de esquerda.
 
-Vice: Fernanda Louback.
+Contagem de cabeças pela posição do partido, entre os 26 com partido conhecido.
 
-Quem fica e quem sai em 2027: https://poderbrasileiro.github.io/#rede
-#Eleições2026 #SegundoTurno #RiodeJaneiro
+https://poderbrasileiro.github.io/c/governador.html
+#Governadores #Brasil
 ```
+
+A imagem entra sozinha pela prévia do link; não precisa anexar.
 
 ---
 
