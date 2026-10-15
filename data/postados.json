@@ -106,7 +106,9 @@
   "camara-2435133": "comissao",
   "camara-2231888": "plenario",
   "senado-124779": "plenario",
-  "camara-2262083": "plenario"
+  "camara-2262083": "plenario",
+  "senado-174386": "plenario",
+  "camara-2458742": "comissao"
  },
  "composicao": {
   "cargo": "ministro",
@@ -275,7 +277,9 @@
    "retrato:deputado:2026-10-10",
    "2turno:governador:RJ",
    "retrato:governador:2026-10-12",
-   "retrato:ministro:2026-10-14"
+   "retrato:ministro:2026-10-14",
+   "pec:senado-174386:2026-10-14:88",
+   "pec:senado-174386:2026-10-14:87"
   ]
  }
 }

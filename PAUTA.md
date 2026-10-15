@@ -1,21 +1,34 @@
-# Pauta de 14/10/2026
+# Pauta de 15/10/2026
 
 Mais fácil pela página: https://poderbrasileiro.github.io/pauta/
 
-## 1. Retrato do dia
+## 1. Votação de PEC
 
-185 de 280 caracteres (o X conta todo link como 23)
+313 de 280 caracteres (o X conta todo link como 23)
 
 ```
-Ministros de Estado hoje: 21% de direita e 79% de esquerda.
+PEC 221/2019 — APROVADA no plenário do Senado em 14/10/2026.
+Sim 75 · Não 1
 
-Contagem de cabeças pela posição do partido, entre os 14 com partido conhecido.
+Altera o art. 7º da Constituição Federal para reduzir a duração máxima semanal do trabalho e prever 2 (dois) dias de repouso semanal remunerado, sem qua…
 
-https://poderbrasileiro.github.io/c/ministro.html
-#Governo #Esplanada
+Veja como cada parlamentar votou: https://poderbrasileiro.github.io/#pecs
+#PEC #Senado #Congresso
 ```
 
-A imagem entra sozinha pela prévia do link; não precisa anexar.
+## 2. Votação de PEC
+
+313 de 280 caracteres (o X conta todo link como 23)
+
+```
+PEC 221/2019 — APROVADA no plenário do Senado em 14/10/2026.
+Sim 75 · Não 1
+
+Altera o art. 7º da Constituição Federal para reduzir a duração máxima semanal do trabalho e prever 2 (dois) dias de repouso semanal remunerado, sem qua…
+
+Veja como cada parlamentar votou: https://poderbrasileiro.github.io/#pecs
+#PEC #Senado #Congresso
+```
 
 ---
 
