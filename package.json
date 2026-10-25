@@ -15,7 +15,8 @@
     "postar": "node scripts/postar.mjs",
     "imagens": "node scripts/imagens.mjs",
     "historico": "node scripts/historico.mjs",
-    "relatorio": "node scripts/postar.mjs --relatorio"
+    "relatorio": "node scripts/postar.mjs --relatorio",
+    "estaduais": "node scripts/estaduais.mjs"
   },
   "dependencies": {
     "d3": "^7.9.0"

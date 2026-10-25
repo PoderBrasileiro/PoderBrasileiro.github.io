@@ -107,6 +107,11 @@ export function criarRede(raiz, dados, { aoEscolherPessoa, aoVerMapa }) {
     cargo ? evolucao(cargo) : null, nota ? h('p', { class: 'q-nota' }, nota) : null);
   const nuvem = (cargo) => h('div', { class: 'q-nuvem' }, doCargo(cargo).map((p) => bolinha(p)));
 
+  // Eleitos que ainda não assumiram, separados pelo cargo que vão ocupar.
+  const eleitosPara = (...quais) => dados.pessoas
+    .filter((p) => p.cargo === 'eleito' && quais.includes(p.cargoEleito))
+    .sort((a, b) => (posicaoDe(a, dados) ?? 99) - (posicaoDe(b, dados) ?? 99));
+
   // Plenário em semicírculo: cada cadeira é uma pessoa, da esquerda para a
   // direita conforme a posição do partido.
   function plenario(cargo, linhas) {
@@ -117,6 +122,18 @@ export function criarRede(raiz, dados, { aoEscolherPessoa, aoVerMapa }) {
       h('span', { class: 'q-total' }, gente.length));
   }
   const fora = (titulo, texto) => h('div', { class: 'q-grupo q-fora' }, h('h4', {}, titulo), h('p', { class: 'q-nota' }, texto));
+
+  // As 27 assembleias. Não há fonte única de quem está lá hoje — cada uma
+  // publica do seu jeito, quando publica —, então o que entra é quem foi
+  // eleito em 2026 e assume em fevereiro de 2027.
+  function assembleias() {
+    const gente = eleitosPara('estadual', 'distrital');
+    if (!gente.length) return fora('Assembleias legislativas', 'Deputados estaduais: fora deste site.');
+    return grupo(`Assembleias legislativas (${gente.length})`,
+      h('div', { class: 'q-nuvem' }, gente.map((p) => bolinha(p))),
+      'Eleitos em 2026, assumem em fevereiro de 2027. De 24 cadeiras nos estados menores a 94 em São Paulo.',
+      gente);
+  }
 
   const n = (cargo) => dados.pessoas.filter((p) => p.cargo === cargo).length;
   const stf = dados.pessoas.filter((p) => p.cargo === 'stf');
@@ -177,7 +194,7 @@ export function criarRede(raiz, dados, { aoEscolherPessoa, aoVerMapa }) {
       nivel('Estados', '26 estados e o Distrito Federal'),
       celula(grupo(`Governadores (${n('governador')})`,
         h('div', { class: 'q-destaques q-gov' }, doCargo('governador').map((p) => comNome(p, p.uf))), null, doCargo('governador'), 'governador')),
-      celula(fora('Assembleias legislativas', 'Deputados estaduais: fora deste site.')),
+      celula(assembleias()),
       celula(fora('Tribunais de Justiça', 'Justiça estadual: fora deste site.')),
 
       nivel('Municípios', '5.569 cidades'),

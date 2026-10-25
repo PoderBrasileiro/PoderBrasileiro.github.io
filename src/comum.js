@@ -138,7 +138,10 @@ export const SITUACOES = {
   depende: { icone: '?', rotulo: 'Em aberto' },
 };
 
-export const CARGO_ELEITO = { governador: 'Governador(a) eleito(a)', senador: 'Senador(a) eleito(a)', deputado: 'Deputado(a) federal eleito(a)' };
+export const CARGO_ELEITO = {
+  governador: 'Governador(a) eleito(a)', senador: 'Senador(a) eleito(a)', deputado: 'Deputado(a) federal eleito(a)',
+  estadual: 'Deputado(a) estadual eleito(a)', distrital: 'Deputado(a) distrital eleito(a)',
+};
 
 export const destinoDe = (pessoa, dados) => dados.eleicao?.destino?.[pessoa.id] ?? null;
 

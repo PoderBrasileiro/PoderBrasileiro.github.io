@@ -11,15 +11,16 @@ const carregar = (nome) => fetch(`${base}data/${nome}`).then((r) => (r.ok ? r.js
 
 let dados;
 try {
-  const [brasil, malha, noticias, eleicao, historico] = await Promise.all([
+  const [brasil, malha, noticias, eleicao, historico, estaduais] = await Promise.all([
     carregar('brasil.json'),
     carregar('malha.json'),
     carregar('noticias.json').catch(() => null),   // opcional: o site funciona sem
     carregar('eleicao2026.json').catch(() => null),
     carregar('historico.json').catch(() => null),
+    carregar('estaduais.json').catch(() => null),
   ]);
   dados = {
-    ...brasil, malha, noticias, eleicao, historico,
+    ...brasil, malha, noticias, eleicao, historico, estaduais,
     pessoaPorId: new Map(brasil.pessoas.map((p) => [p.id, p])),
     ufPorSigla: new Map(brasil.ufs.map((u) => [u.sigla, u])),
     governadorPorUf: new Map(brasil.pessoas.filter((p) => p.cargo === 'governador').map((p) => [p.uf, p])),
@@ -30,6 +31,15 @@ try {
     const p = { ...e, cargo: 'eleito' };
     dados.pessoas.push(p);
     dados.pessoaPorId.set(p.id, p);
+  }
+  // Deputados estaduais e distritais eleitos em 2026: a camada que faltava
+  // entre o Congresso e as prefeituras. Também só assumem em 2027.
+  for (const [uf, lista] of Object.entries(estaduais?.porUf ?? {})) {
+    for (const e of lista) {
+      const p = { ...e, cargo: 'eleito', cargoEleito: uf === 'DF' ? 'distrital' : 'estadual', uf };
+      dados.pessoas.push(p);
+      dados.pessoaPorId.set(p.id, p);
+    }
   }
 } catch (e) {
   document.querySelector('.palco').replaceChildren(

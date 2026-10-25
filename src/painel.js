@@ -222,6 +222,18 @@ export function criarPainel(raiz, dados, { aoEscolherPessoa, aoEscolherUf, aoVer
     return sec;
   }
 
+  // Assembleia do estado: quem foi eleito em 2026 e assume em 2027.
+  function blocoEstaduais(lista) {
+    if (!lista.length) return null;
+    lista.sort((a, b) => a.nome.localeCompare(b.nome, 'pt'));
+    const sigla = lista[0].cargoEleito === 'distrital' ? 'Câmara Legislativa' : 'Assembleia Legislativa';
+    return h('section', {}, h('h3', {}, `${sigla} — eleitos em 2026 (${lista.length})`),
+      h('p', { class: 'fraco' }, 'Assumem em fevereiro de 2027. Quem está na assembleia hoje não está neste site.'),
+      h('ul', { class: 'prefeitos' }, lista.map((p) => h('li', {},
+        h('button', { class: 'prefeito-linha', onclick: () => aoEscolherPessoa(p.id) },
+          h('b', {}, p.nome), h('small', {}, `${textoPartido(p)}${p.pct ? ` · ${p.pct}% dos votos` : ''}`))))));
+  }
+
   // Lista de prefeitos do estado, com filtro. São centenas por UF, então é
   // uma linha por município em vez do cartão com foto.
   function blocoPrefeitos(sigla) {
@@ -280,6 +292,7 @@ export function criarPainel(raiz, dados, { aoEscolherPessoa, aoEscolherUf, aoVer
         sen.map((p) => cartao(p, dados, aoEscolherPessoa)),
         blocoChegam(sigla, dados),
         blocoDeputados(gente.filter((p) => p.cargo === 'deputado')),
+        blocoEstaduais(gente.filter((p) => p.cargo === 'eleito' && ['estadual', 'distrital'].includes(p.cargoEleito))),
         blocoPrefeitos(sigla));
     },
 
