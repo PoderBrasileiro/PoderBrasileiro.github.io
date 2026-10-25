@@ -24,10 +24,20 @@ const UA = 'PoderBR/0.1 (projeto pessoal; dados publicos)';
 const MESES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho',
   'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
 
+// Com repetição: de dentro do GitHub o IBGE estoura o tempo de conexão de vez
+// em quando, e sem isto a coleta inteira morria na primeira chamada — foram
+// três dias sem atualizar nada por causa disso.
 async function json(url, opts = {}) {
-  const r = await fetch(url, { headers: { Accept: 'application/json', 'User-Agent': UA }, ...opts });
-  if (!r.ok) throw new Error(`${r.status} em ${url}`);
-  return r.json();
+  for (let i = 0; ; i++) {
+    try {
+      const r = await fetch(url, { headers: { Accept: 'application/json', 'User-Agent': UA }, signal: AbortSignal.timeout(30000), ...opts });
+      if (!r.ok) throw new Error(`${r.status} em ${url}`);
+      return await r.json();
+    } catch (e) {
+      if (i >= 3) throw new Error(`${e.message} em ${url}`);
+      await new Promise((ok) => setTimeout(ok, 2000 * (i + 1)));
+    }
+  }
 }
 
 async function lerJson(caminho) {
@@ -390,7 +400,17 @@ async function coletarStf() {
 // ---------- principal ----------
 
 console.log('IBGE...');
-const { ufs, malha } = await coletarIbge();
+let ufs, malha;
+try {
+  ({ ufs, malha } = await coletarIbge());
+} catch (e) {
+  const antes = await lerJson('public/data/brasil.json').catch(() => null);
+  const malhaAntes = await lerJson('public/data/malha.json').catch(() => null);
+  if (!antes || !malhaAntes) { console.error(`IBGE fora e sem cópia local: ${e.message}`); process.exit(1); }
+  ufs = antes.ufs;
+  malha = malhaAntes;
+  console.warn(`  IBGE indisponível (${e.message}): usando a lista de UFs e a malha da coleta anterior.`);
+}
 console.log('Senado...');
 const senadores = await coletarSenadores();
 console.log('Votações do Senado...');

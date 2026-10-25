@@ -3,6 +3,11 @@ name: Atualizar dados e publicar
 on:
   schedule:
     - cron: '17 9 * * *'   # todo dia, 06:17 de Brasília
+    # Noite de apuração: as urnas fecham às 17h de Brasília e o resultado sai
+    # ao longo da noite. Sem isto o site só mostraria o presidente eleito na
+    # manhã seguinte, que é tarde demais justamente no dia que mais importa.
+    - cron: '20 20-23 25,26 10 *'   # 17h às 20h de Brasília, 25 e 26 de outubro
+    - cron: '20 0-3 26,27 10 *'     # 21h às 0h de Brasília
   workflow_dispatch:
   push:
     branches: [main]
