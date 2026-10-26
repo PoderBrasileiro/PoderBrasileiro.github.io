@@ -46,10 +46,6 @@
  ],
  "pendentes": {
   "2turno:presidente": true,
-  "2turno:governador:AC": true,
-  "2turno:governador:AM": true,
-  "2turno:governador:DF": true,
-  "2turno:governador:ES": true,
   "2turno:governador:RN": true,
   "2turno:governador:TO": true
  },
@@ -281,7 +277,11 @@
    "retrato:governador:2026-10-12",
    "retrato:ministro:2026-10-14",
    "pec:senado-174386:2026-10-14:88",
-   "pec:senado-174386:2026-10-14:87"
+   "pec:senado-174386:2026-10-14:87",
+   "2turno:governador:AC",
+   "2turno:governador:AM",
+   "2turno:governador:DF",
+   "2turno:governador:ES"
   ]
  }
 }
