@@ -2,19 +2,9 @@
 
 Mais fácil pela página: https://poderbrasileiro.github.io/pauta/
 
-## 1. Resultado do 2º turno
+Nada para postar hoje.
 
-194 de 280 caracteres (o X conta todo link como 23)
-
-```
-2º turno — Presidência da República: eleito(a) Lula (PT), com 45,16% dos votos válidos.
-
-Vice: Geraldo Alckmin.
-
-Quem fica e quem sai em 2027: https://poderbrasileiro.github.io/#rede
-#Eleições2026 #SegundoTurno
-```
-
+Último retrato: 2026-10-14.
 ---
 
 Refeita sozinha todo dia. O que já apareceu aqui não volta em pautas futuras.
