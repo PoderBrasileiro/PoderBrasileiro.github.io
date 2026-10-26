@@ -34,6 +34,54 @@ const FAIXA = {
   // "Partido pega-tudo" descreve estratégia, não posição: fica de fora.
 };
 
+// ---------- posição no espectro, pelo Global Party Survey ----------
+
+// O GPS (Pippa Norris, 2019) é a única base com nota de esquerda-direita
+// comparável entre países: survey com especialistas, 1.043 partidos em 163
+// países, licença CC0. A escala vai de 0 (esquerda) a 10 (direita), a mesma
+// direção do survey brasileiro — mas são estudos diferentes e não se somam.
+const GPS = 'https://dataverse.harvard.edu/api/access/datafile/3788852';
+
+const semAspas = (s) => (s ?? '').replace(/^"|"$/g, '').trim();
+const chave = (s) => semAspas(s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+  .replace(/\(.*?\)/g, ' ').replace(/\b(party|partido|the|of|for)\b/g, ' ')
+  .replace(/[^a-z0-9]+/g, ' ').trim();
+
+async function baixarSurvey() {
+  const r = await fetch(GPS, { headers: { 'User-Agent': UA['User-Agent'] }, signal: AbortSignal.timeout(180000) });
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  const linhas = (await r.text()).split('\n').filter(Boolean);
+  const col = linhas[0].split('\t');
+  const i = (n) => col.indexOf(n);
+  // Por país, pra não casar um partido brasileiro com um nome igual lá fora.
+  const porPais = new Map();
+  for (const bruto of linhas.slice(1)) {
+    const c = bruto.split('\t');
+    const v4 = parseFloat(semAspas(c[i('V4_Scale')]));
+    if (Number.isNaN(v4)) continue;
+    const iso3 = semAspas(c[i('ISO')]);
+    if (!porPais.has(iso3)) porPais.set(iso3, []);
+    porPais.get(iso3).push({
+      nome: semAspas(c[i('Partyname')]),
+      sigla: semAspas(c[i('Partyabb')]),
+      posicao: Math.round(v4 * 100) / 100,
+      social: Math.round(parseFloat(semAspas(c[i('V6_Scale')])) * 100) / 100 || null,
+    });
+  }
+  return porPais;
+}
+
+// Nome exato, sigla, e por fim um nome contendo o outro — sempre dentro do
+// mesmo país, que é o que impede casamento absurdo entre homônimos.
+function acharNoSurvey(cand, nomes, siglas) {
+  const alvos = nomes.map(chave).filter(Boolean);
+  const sig = siglas.map((s) => chave(s)).filter(Boolean);
+  return cand.find((p) => alvos.includes(chave(p.nome)))
+    ?? cand.find((p) => sig.length && sig.includes(chave(p.sigla)))
+    ?? cand.find((p) => alvos.some((a) => a.length > 6 && (chave(p.nome).includes(a) || a.includes(chave(p.nome)))))
+    ?? null;
+}
+
 async function consultar(query) {
   for (let i = 0; ; i++) {
     try {
@@ -55,8 +103,8 @@ const qid = (uri) => uri.split('/').pop();
 // exemplo); por isso o filtro de país no partido.
 console.log('Wikidata: chefes de Estado e de governo...');
 const linhas = await consultar(`
-SELECT ?iso ?num ?paisLabel ?pais ?cargo ?pessoa ?pessoaLabel ?partido ?partidoLabel ?paisDoPartido ?espectro ?formaLabel ?desde WHERE {
-  ?pais wdt:P31 wd:Q3624078 ; wdt:P297 ?iso ; wdt:P299 ?num .
+SELECT ?iso ?iso3 ?num ?paisLabel ?pais ?cargo ?pessoa ?pessoaLabel ?partido ?partidoLabel ?paisDoPartido ?espectro ?formaLabel ?desde WHERE {
+  ?pais wdt:P31 wd:Q3624078 ; wdt:P297 ?iso ; wdt:P298 ?iso3 ; wdt:P299 ?num .
   FILTER NOT EXISTS { ?pais wdt:P576 ?extinto }
   VALUES (?prop ?cargo) { (p:P35 "estado") (p:P6 "governo") }
   ?pais ?prop ?decl .
@@ -78,7 +126,7 @@ const paises = new Map();
 for (const l of linhas) {
   const iso = l.iso.value;
   const p = paises.get(iso) ?? {
-    iso, num: Number(l.num.value), nome: l.paisLabel.value,
+    iso, iso3: l.iso3.value, num: Number(l.num.value), nome: l.paisLabel.value,
     wikidata: `https://www.wikidata.org/wiki/${qid(l.pais.value)}`,
   };
   const cargo = l.cargo.value;   // "estado" ou "governo"
@@ -91,6 +139,7 @@ for (const l of linhas) {
     faixa: espectro?.faixa ?? null,
     posicaoRotulo: espectro?.rotulo ?? null,
     desde: l.desde?.value.slice(0, 10) ?? null,
+    _qid: l.partido ? qid(l.partido.value) : null,
   };
   novo.doPais = l.paisDoPartido?.value === l.pais.value;
   p.forma = p.forma ?? l.formaLabel?.value ?? null;
@@ -100,6 +149,46 @@ for (const l of linhas) {
   const peso = (x) => (x ? (x.doPais ? 4 : 0) + (x.faixa ? 2 : 0) + (x.partido ? 1 : 0) : -1);
   if (peso(novo) > peso(atual)) p[cargo] = novo;
   paises.set(iso, p);
+}
+
+// Nome em inglês e sigla de cada partido, numa consulta própria: juntar isso
+// à consulta principal multiplicava as linhas e a resposta vinha truncada.
+console.log('Nomes dos partidos em inglês...');
+const qids = [...new Set([...paises.values()].flatMap((p) => [p.estado?._qid, p.governo?._qid]).filter(Boolean))];
+const apelidos = new Map();
+for (let i = 0; i < qids.length; i += 80) {
+  const valores = qids.slice(i, i + 80).map((q) => `wd:${q}`).join(' ');
+  const r = await consultar(`SELECT ?partido ?en ?sigla WHERE {
+    VALUES ?partido { ${valores} }
+    OPTIONAL { ?partido rdfs:label ?en . FILTER(LANG(?en) = "en") }
+    OPTIONAL { ?partido wdt:P1813 ?sigla } }`).catch(() => []);
+  for (const l of r) {
+    const k = qid(l.partido.value);
+    const a = apelidos.get(k) ?? { nomes: new Set(), siglas: new Set() };
+    if (l.en) a.nomes.add(l.en.value);
+    if (l.sigla) a.siglas.add(l.sigla.value);
+    apelidos.set(k, a);
+  }
+}
+
+console.log('Global Party Survey...');
+let survey = new Map();
+try { survey = await baixarSurvey(); } catch (e) { console.warn(`  survey indisponível (${e.message}): fica só a categoria da Wikidata.`); }
+
+for (const p of paises.values()) {
+  for (const cargo of ['estado', 'governo']) {
+    const c = p[cargo];
+    if (!c?.partido) { if (c) delete c._qid; continue; }
+    const a = apelidos.get(c._qid) ?? { nomes: new Set(), siglas: new Set() };
+    const achado = acharNoSurvey(survey.get(p.iso3) ?? [], [...a.nomes, c.partido], [...a.siglas]);
+    if (achado) {
+      c.posicao = achado.posicao;
+      c.social = achado.social;
+      c.partidoNoSurvey = achado.nome;
+    }
+    delete c._qid;
+  }
+  delete p.iso3;
 }
 
 const lista = [...paises.values()].sort((a, b) => a.nome.localeCompare(b.nome, 'pt'));
@@ -116,7 +205,9 @@ await writeFile(new URL('public/data/mundo.json', RAIZ), JSON.stringify({
 
 const comFaixa = lista.filter((p) => p.governo?.faixa || p.estado?.faixa).length;
 const comPartido = lista.filter((p) => p.governo?.partido || p.estado?.partido).length;
-console.log(`\nOK: ${lista.length} países; ${comPartido} com partido, ${comFaixa} com posição no espectro.`);
+const comPosicao = lista.filter((p) => p.governo?.posicao != null || p.estado?.posicao != null).length;
+console.log(`
+OK: ${lista.length} países; ${comPartido} com partido, ${comPosicao} com nota do survey (0 a 10), ${comFaixa} com categoria da Wikidata.`);
 const cont = {};
 for (const p of lista) { const f = (p.governo?.faixa ?? p.estado?.faixa) ?? '(sem)'; cont[f] = (cont[f] ?? 0) + 1; }
 console.log(Object.entries(cont).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k}: ${v}`).join(' · '));
