@@ -45,9 +45,7 @@
   "pec:senado-170850:2026-07-14:79"
  ],
  "pendentes": {
-  "2turno:presidente": true,
-  "2turno:governador:RN": true,
-  "2turno:governador:TO": true
+  "2turno:presidente": true
  },
  "etapas": {
   "camara-2140446": "plenario",
@@ -281,7 +279,9 @@
    "2turno:governador:AC",
    "2turno:governador:AM",
    "2turno:governador:DF",
-   "2turno:governador:ES"
+   "2turno:governador:ES",
+   "2turno:governador:RN",
+   "2turno:governador:TO"
   ]
  }
 }
