@@ -457,3 +457,16 @@ span.votante { color: var(--texto-2); border-style: dashed; }
 .q-destaques .b-nome { transform-origin: left center; }
 .pecs-controles { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
 .pecs-controles .filtro { flex: 1 1 220px; max-width: 360px; }
+
+/* ---------- aba Mundo ---------- */
+.mundo-modos { display: flex; gap: 4px; padding: 3px; background: var(--fundo-2); border-radius: 10px; }
+.mundo-topo { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; }
+.mundo-modos button { padding: 6px 14px; border: 0; border-radius: 8px; background: none; color: var(--texto-2); font: inherit; }
+.mundo-modos button[aria-selected="true"] { background: var(--fundo); color: var(--texto); font-weight: 600; box-shadow: 0 1px 2px rgb(0 0 0 / 0.15); }
+.pais { stroke: var(--borda); stroke-width: 0.4; stroke-linejoin: round; cursor: pointer; transition: fill 0.35s ease, opacity 0.12s; }
+.pais:hover { opacity: 0.8; }
+.pais.ativa { stroke: var(--destaque); stroke-width: 2; }
+.legenda-tempo { display: flex; align-items: center; gap: 2px; }
+.legenda-tempo i { display: inline-block; width: 22px; height: 10px; }
+.legenda-tempo i:first-of-type { border-radius: 5px 0 0 5px; }
+.legenda-tempo i:last-of-type { border-radius: 0 5px 5px 0; }

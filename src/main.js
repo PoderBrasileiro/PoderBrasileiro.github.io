@@ -3,6 +3,7 @@ import { criarMapa } from './mapa.js';
 import { criarRede } from './rede.js';
 import { criarPainel } from './painel.js';
 import { criarPecs } from './pecs.js';
+import { criarMundo, corDoTempo } from './mundo.js';
 import { criarContagem } from './contagem.js';
 import { criarPresenca } from './presenca.js';
 
@@ -11,16 +12,18 @@ const carregar = (nome) => fetch(`${base}data/${nome}`).then((r) => (r.ok ? r.js
 
 let dados;
 try {
-  const [brasil, malha, noticias, eleicao, historico, estaduais] = await Promise.all([
+  const [brasil, malha, noticias, eleicao, historico, estaduais, mundo, mundoMalha] = await Promise.all([
     carregar('brasil.json'),
     carregar('malha.json'),
     carregar('noticias.json').catch(() => null),   // opcional: o site funciona sem
     carregar('eleicao2026.json').catch(() => null),
     carregar('historico.json').catch(() => null),
     carregar('estaduais.json').catch(() => null),
+    carregar('mundo.json').catch(() => null),
+    carregar('mundo-malha.json').catch(() => null),
   ]);
   dados = {
-    ...brasil, malha, noticias, eleicao, historico, estaduais,
+    ...brasil, malha, noticias, eleicao, historico, estaduais, mundo, mundoMalha,
     pessoaPorId: new Map(brasil.pessoas.map((p) => [p.id, p])),
     ufPorSigla: new Map(brasil.ufs.map((u) => [u.sigla, u])),
     governadorPorUf: new Map(brasil.pessoas.filter((p) => p.cargo === 'governador').map((p) => [p.uf, p])),
@@ -55,6 +58,8 @@ const acoes = {
   aoVerMinistros: () => selecionar({ ministros: true }),
   aoVerMapa: () => abrirAba('mapa'),
   aoEscolherPec: (pec) => selecionar({ pec }),
+  aoEscolherPais: (pais) => selecionar({ pais }),
+  aoVerBrasil: () => { abrirAba('mapa'); selecionar({}); },
   linkAtual: () => linkDe(selecaoAtual),
   carregarMalhaUf: (uf) => carregar(`malhas/${uf}.json`),
 };
@@ -65,11 +70,16 @@ const painel = criarPainel(document.getElementById('painel'), dados, acoes);
 criarContagem(document.getElementById('contagem'), dados);
 criarPresenca(document.getElementById('presenca'));
 const abaPecs = criarPecs(document.getElementById('vis-pecs'), dados, acoes);
+// A aba Mundo só existe se os dois arquivos do mundo tiverem chegado.
+const mundoVis = dados.mundo && dados.mundoMalha ? criarMundo(document.getElementById('vis-mundo'), dados, acoes) : null;
+if (!mundoVis) document.querySelector('.abas [data-aba="mundo"]')?.remove();
+else document.getElementById('vis-mundo').addEventListener('modo', desenharLegenda);
 
 let selecaoAtual = {};
 // Endereço do que está aberto, pra dar pra mandar o recorte pra alguém.
 // Formato: #aba, #p=id, #uf=MG, #pec=camara-123, #ministros.
 export function enderecoDe(sel = selecaoAtual) {
+  if (sel.pais) return `#pais=${sel.pais}`;
   if (sel.pessoa) return `#p=${encodeURIComponent(sel.pessoa)}`;
   if (sel.pec) return `#pec=${encodeURIComponent(sel.pec)}`;
   if (sel.uf) return `#uf=${sel.uf}`;
@@ -83,11 +93,13 @@ function selecionar(sel, mexerNoEndereco = true) {
   mapa.selecionar(sel);
   rede.selecionar(sel);
   abaPecs.selecionar(sel);
-  if (sel.pessoa) painel.pessoa(sel.pessoa);
+  mundoVis?.selecionar(sel);
+  if (sel.pais) painel.pais(sel.pais);
+  else if (sel.pessoa) painel.pessoa(sel.pessoa);
   else if (sel.uf) painel.uf(sel.uf);
   else if (sel.ministros) painel.ministros();
   else if (sel.pec) painel.pec(sel.pec);
-  else painel.resumo();
+  else painel.resumo(document.querySelector('.abas [aria-selected="true"]')?.dataset.aba === 'mundo');
   if (mexerNoEndereco) history.replaceState(null, '', enderecoDe(sel));
   // No celular o painel fica abaixo da visualização.
   if (matchMedia('(max-width: 900px)').matches) document.getElementById('painel').scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -98,6 +110,7 @@ function selecionar(sel, mexerNoEndereco = true) {
 function pintar() {
   const escala = escalaEspectro();
   mapa.pintar(escala);
+  mundoVis?.pintar();
   rede.pintar(escala);
   desenharLegenda();
 }
@@ -119,6 +132,23 @@ function desenharLegenda() {
   const aba = document.querySelector('.abas [aria-selected="true"]').dataset.aba;
   const el = document.getElementById('legenda');
   el.hidden = aba === 'lista' || aba === 'pecs';
+  // O mundo tem legenda própria: ali a cor mede tempo, não ideologia.
+  if (aba === 'mundo' && mundoVis) {
+    const escuro = getComputedStyle(document.documentElement).colorScheme.includes('dark');
+    if (mundoVis.modo === 'tempo') {
+      el.replaceChildren(
+        h('div', { class: 'legenda-item' }, h('span', {}, 'Anos no cargo:'),
+          h('span', { class: 'legenda-tempo' }, [2, 7, 15, 25, 40].map((a) => h('i', { style: `background:${corDoTempo(a, escuro)}`, title: `${a} anos` }))),
+          h('span', {}, 'de menos de 4 a mais de 20')),
+        h('div', { class: 'legenda-item' }, h('span', { class: 'legenda-hachura' }), h('span', {}, 'Sem data de posse')));
+    } else {
+      el.replaceChildren(
+        h('div', { class: 'legenda-item' }, h('span', {}, 'esquerda'), h('span', { class: 'legenda-rampa' }), h('span', {}, 'direita')),
+        h('div', { class: 'legenda-item' }, h('span', { class: 'legenda-hachura' }), h('span', {}, 'Sem posição conhecida')),
+        h('div', { class: 'legenda-item fraco' }, 'Posição do partido que governa, pelo Global Party Survey de 2019'));
+    }
+    return;
+  }
   el.replaceChildren(
     h('div', { class: 'legenda-item' },
       h('span', {}, 'esquerda'), h('span', { class: 'legenda-rampa' }), h('span', {}, 'direita')),
@@ -163,11 +193,12 @@ const redesenharLista = criarLista(document.getElementById('vis-lista'));
 
 function abrirAba(nome) {
   for (const b of document.querySelectorAll('.abas button')) b.setAttribute('aria-selected', String(b.dataset.aba === nome));
-  for (const a of ['mapa', 'rede', 'lista', 'pecs']) document.getElementById(`vis-${a}`).hidden = a !== nome;
+  for (const a of ['mundo', 'mapa', 'rede', 'lista', 'pecs']) document.getElementById(`vis-${a}`).hidden = a !== nome;
   // Trocar de aba sem nada aberto volta o endereço pra aba; com algo aberto,
   // o recorte continua valendo e o endereço fica como está.
   if (enderecoDe().startsWith('#' + nome) || /^#(mapa|rede|lista|pecs)$/.test(location.hash)) history.replaceState(null, '', `#${nome}`);
   desenharLegenda();
+  if (!selecaoAtual.pessoa && !selecaoAtual.uf && !selecaoAtual.pec && !selecaoAtual.pais && !selecaoAtual.ministros) painel.resumo(nome === 'mundo');
 }
 for (const b of document.querySelectorAll('.abas button')) b.addEventListener('click', () => abrirAba(b.dataset.aba));
 
@@ -261,12 +292,13 @@ painel.resumo();
 // retomado quando aquele arquivo chega.
 function abrirEndereco() {
   const h = location.hash.slice(1);
-  if (['rede', 'lista', 'pecs', 'mapa'].includes(h)) return abrirAba(h);
+  if (['mundo', 'rede', 'lista', 'pecs', 'mapa'].includes(h)) return abrirAba(h);
   const [chave, bruto] = h.split('=');
   const valor = bruto && decodeURIComponent(bruto);
   if (chave === 'p' && dados.pessoaPorId.has(valor)) return acoes.aoEscolherPessoa(valor);
   if (chave === 'uf' && dados.ufPorSigla.has(valor)) return acoes.aoEscolherUf(valor);
   if (chave === 'ministros') return acoes.aoVerMinistros();
+  if (chave === 'pais' && mundoVis) { abrirAba('mundo'); return acoes.aoEscolherPais(valor); }
   if (chave === 'pec' && dados.pecs) { abrirAba('pecs'); return selecionar({ pec: valor }); }
   return null;
 }

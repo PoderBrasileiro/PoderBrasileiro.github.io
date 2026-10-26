@@ -1,6 +1,7 @@
 // Painel lateral: resumo, UF, lista de ministros ou ficha de uma pessoa.
 
 import { h, trocar, CARGOS, CARGO_ELEITO, SITUACOES, destinoDe, selo, textoPartido, ondeAtua, fmtNum, fmtData, semAcento } from './comum.js';
+import { anosNoCargo, ehMonarquia } from './mundo.js';
 import { ROTULO_VOTO, tiposDeVoto, placarCurto, ETAPAS, etapaDe, trilha, selo as seloPec } from './pecs.js';
 
 function avatar(p, grande = false) {
@@ -171,7 +172,7 @@ function blocoNoticias(p, dados) {
   return sec;
 }
 
-export function criarPainel(raiz, dados, { aoEscolherPessoa, aoEscolherUf, aoVerMinistros, aoEscolherPec, linkAtual }) {
+export function criarPainel(raiz, dados, { aoEscolherPessoa, aoEscolherUf, aoVerMinistros, aoEscolherPec, aoEscolherPais, aoVerBrasil, linkAtual }) {
   // Copia o endereço do que está aberto. O clipboard falha em http sem TLS e
   // quando o usuário nega a permissão; nesses casos o link aparece pra copiar
   // à mão, que é melhor que um botão que não faz nada.
@@ -260,8 +261,36 @@ export function criarPainel(raiz, dados, { aoEscolherPessoa, aoEscolherUf, aoVer
     return sec;
   }
 
+  // Panorama do mundo, quando a aba Mundo está aberta e nenhum país escolhido.
+  function resumoMundo() {
+    const paises = dados.mundo?.paises ?? [];
+    if (!paises.length) return null;
+    const anos = paises.map((p) => anosNoCargo(p.estado?.desde ?? p.governo?.desde)).filter((a) => a != null);
+    // O ranking exclui monarcas: herdar o trono não é ficar no poder.
+    const velhos = paises
+      .map((p) => ({ p, a: anosNoCargo(p.estado?.desde) }))
+      .filter((x) => x.a != null && !ehMonarquia(x.p)).sort((x, y) => y.a - x.a).slice(0, 5);
+    const comNota = paises.filter((p) => (p.governo?.posicao ?? p.estado?.posicao) != null);
+    return h('section', {}, h('h3', {}, 'O mundo em números'),
+      h('ul', { class: 'contagem' },
+        h('li', {}, h('b', {}, paises.length), ' países'),
+        h('li', {}, h('b', {}, anos.filter((a) => a >= 20).length), ' há 20 anos ou mais no cargo'),
+        h('li', {}, h('b', {}, anos.filter((a) => a < 4).length), ' há menos de 4 anos'),
+        h('li', {}, h('b', {}, comNota.length), ' com posição no espectro')),
+      h('p', { class: 'rotulo' }, 'Mais tempo no cargo, fora monarquias'),
+      h('ul', { class: 'prefeitos' }, velhos.map(({ p, a }) => h('li', {},
+        h('button', { class: 'prefeito-linha', onclick: () => aoEscolherPais(p.iso) },
+          h('b', {}, `${p.nome} — ${p.estado.nome}`),
+          h('small', {}, `há ${fmtNum(a, 0)} anos`))))),
+      h('p', { class: 'fraco' }, 'Clique num país para ver quem governa. A posição de esquerda e direita é a do partido, pelo Global Party Survey de 2019 — não é uma medida do país.'));
+  }
+
   return {
-    resumo() {
+    resumo(mundo) {
+      if (mundo) { const r = resumoMundo(); if (r) return trocar(raiz, compartilhar(), h('h2', {}, 'O poder no mundo'), r); }
+      return this.resumoBrasil();
+    },
+    resumoBrasil() {
       const conta = (c) => dados.pessoas.filter((p) => p.cargo === c).length;
       trocar(raiz, 
         h('h2', {}, 'Comece por aqui'),
@@ -305,6 +334,47 @@ export function criarPainel(raiz, dados, { aoEscolherPessoa, aoEscolherUf, aoVer
         compartilhar(),
         h('p', { class: 'fraco' }, `Fonte: página oficial do Planalto${dados.ministrosAtualizadoEm ? `, atualizada em ${dados.ministrosAtualizadoEm}` : ''}.`),
         lista.map((p) => cartao(p, dados, aoEscolherPessoa)));
+    },
+
+  // Ficha de um país: quem governa, há quanto tempo, e o que se sabe do
+  // partido. Tudo com link pra Wikidata, que é de onde vem e onde se corrige.
+    pais(iso) {
+    const d = (dados.mundo?.paises ?? []).find((p) => p.iso === iso);
+    if (!d) return this.resumo();
+    const anos = (desde) => {
+      const a = anosNoCargo(desde);
+      return a == null ? null : `há ${fmtNum(a, a < 10 ? 1 : 0)} ano${a >= 2 ? 's' : ''}`;
+    };
+    const bloco = (titulo, c) => {
+      if (!c) return null;
+      const tempo = anos(c.desde);
+      return h('section', {}, h('h3', {}, titulo),
+        h('p', {}, h('b', {}, c.nome)),
+        h('p', { class: 'fraco' }, [c.partido ?? 'sem partido informado', tempo && `no cargo ${tempo}`].filter(Boolean).join(' · ')),
+        c.posicao != null
+          ? h('div', {},
+            h('p', { class: 'numero' }, h('b', {}, fmtNum(c.posicao, 1)), ' de 10 na régua esquerda–direita'),
+            regua(c.posicao / 10, ['esquerda', 'direita']),
+            h('p', { class: 'fraco' }, `Posição do partido no Global Party Survey de 2019${c.partidoNoSurvey && c.partidoNoSurvey !== c.partido ? ` (lá chamado “${c.partidoNoSurvey}”)` : ''}. É a posição do partido naquele ano, não uma medida desta pessoa.`))
+          : c.posicaoRotulo
+            ? h('p', { class: 'fraco' }, `Classificado como ${c.posicaoRotulo.toLowerCase()} na Wikidata. Sem nota no survey, então sem posição na régua.`)
+            : h('p', { class: 'fraco' }, 'Sem posição conhecida para o partido.'),
+        h('ul', { class: 'buscas' }, h('li', {}, h('a', { href: c.wikidata, target: '_blank', rel: 'noopener noreferrer' }, 'Conferir na Wikidata ↗'))));
+    };
+    trocar(raiz,
+      compartilhar(),
+      h('p', { class: 'sobretitulo' }, d.forma ?? 'País'),
+      h('h2', {}, d.nome),
+      d.iso === 'BR'
+        ? h('button', { class: 'botao', onclick: aoVerBrasil }, 'Ver o Brasil por dentro')
+        : null,
+      d.acumula
+        ? bloco('Chefe de Estado e de governo', d.estado)
+        : [bloco('Chefe de Estado', d.estado), bloco('Chefe de governo', d.governo)],
+      h('section', {}, h('h3', {}, 'De onde vem'),
+        h('p', { class: 'fraco' }, 'Quem ocupa o cargo e o partido vêm da Wikidata, editada por voluntários — em país com troca rápida de governo ela pode estar atrasada. A posição no espectro vem do Global Party Survey de 2019, feito com cientistas políticos de cada país.'),
+        h('ul', { class: 'buscas' }, h('li', {}, h('a', { href: d.wikidata, target: '_blank', rel: 'noopener noreferrer' }, 'O país na Wikidata ↗')))));
+    raiz.scrollTop = 0;
     },
 
     pec(id) {

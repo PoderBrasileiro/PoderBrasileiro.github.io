@@ -197,6 +197,18 @@ for (const p of lista) p.acumula = Boolean(p.estado && p.governo && p.estado.nom
 
 if (lista.length < 150) { console.error(`\nABORTADO — só ${lista.length} países, esperado ~195.`); process.exit(1); }
 
+// O mapa-múndi: Natural Earth pelo pacote world-atlas, domínio público. Fica
+// em TopoJSON porque é cinco vezes menor que o GeoJSON equivalente; o
+// navegador converte na hora de desenhar.
+console.log('Mapa-múndi...');
+try {
+  const r = await fetch('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-50m.json', { headers: UA, signal: AbortSignal.timeout(120000) });
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  await writeFile(new URL('public/data/mundo-malha.json', RAIZ), await r.text());
+} catch (e) {
+  console.warn(`  mapa indisponível (${e.message}): fica o da coleta anterior.`);
+}
+
 await writeFile(new URL('public/data/mundo.json', RAIZ), JSON.stringify({
   geradoEm: new Date().toISOString(),
   fonte: 'Wikidata',

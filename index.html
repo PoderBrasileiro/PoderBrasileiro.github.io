@@ -26,7 +26,8 @@
       <ul id="busca-resultados" class="busca-resultados" hidden></ul>
     </div>
     <nav class="abas" role="tablist" aria-label="Visualizações">
-      <button role="tab" data-aba="mapa" aria-selected="true">Mapa</button>
+      <button role="tab" data-aba="mundo" aria-selected="false">Mundo</button>
+      <button role="tab" data-aba="mapa" aria-selected="true">Brasil</button>
       <button role="tab" data-aba="rede" aria-selected="false">Rede de poder</button>
       <button role="tab" data-aba="lista" aria-selected="false">Lista</button>
       <button role="tab" data-aba="pecs" aria-selected="false">PECs</button>
@@ -40,6 +41,7 @@
 
   <main class="palco">
     <section class="vis" aria-live="polite">
+      <div id="vis-mundo" class="aba-conteudo" hidden></div>
       <div id="vis-mapa" class="aba-conteudo"></div>
       <div id="vis-rede" class="aba-conteudo" hidden></div>
       <div id="vis-lista" class="aba-conteudo" hidden></div>
