@@ -16,7 +16,7 @@ const SAIDA = new URL('../public/data/pecs.json', import.meta.url);
 const MESES = 18;
 const CAMARA = 'https://dadosabertos.camara.leg.br/api/v2';
 const SENADO = 'https://legis.senado.leg.br/dadosabertos';
-const H = { headers: { Accept: 'application/json', 'User-Agent': 'PoderBR/0.1 (projeto pessoal; dados publicos)' } };
+const H = { headers: { Accept: 'application/json', 'User-Agent': 'GPL/0.1 (projeto pessoal; dados publicos)' } };
 
 async function json(url) {
   for (let i = 0; ; i++) {

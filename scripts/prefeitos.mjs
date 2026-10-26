@@ -19,7 +19,7 @@ const BASE = 'https://resultados.tse.jus.br/oficial/ele2024';
 const TURNO_1 = '619';
 const TURNO_2 = '620';
 const PARALELO = 8;
-const UA = { 'User-Agent': 'PoderBR/0.1 (projeto pessoal; dados publicos)' };
+const UA = { 'User-Agent': 'GPL/0.1 (projeto pessoal; dados publicos)' };
 
 async function json(url, tentativas = 4) {
   for (let i = 0; ; i++) {

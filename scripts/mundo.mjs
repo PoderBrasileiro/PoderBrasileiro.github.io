@@ -18,7 +18,7 @@
 import { writeFile } from 'node:fs/promises';
 
 const RAIZ = new URL('..', import.meta.url);
-const UA = { 'User-Agent': 'PoderBR/0.1 (projeto pessoal; dados publicos)', Accept: 'application/sparql-results+json' };
+const UA = { 'User-Agent': 'GPL/0.1 (projeto pessoal; dados publicos)', Accept: 'application/sparql-results+json' };
 
 // Identificadores, não rótulos: o texto da Wikidata muda de tradução, o Q não.
 const FAIXA = {

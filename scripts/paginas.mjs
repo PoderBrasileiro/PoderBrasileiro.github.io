@@ -40,7 +40,7 @@ function pagina(p) {
   const partido = p.cargo === 'stf' ? null : p.partido === undefined ? null : p.partido ?? 'sem partido';
   const info = partido && brasil.partidos[p.partido];
   const d = eleicao?.destino?.[p.id];
-  const titulo = `${p.nome} — ${cargo}${onde ? ` (${onde})` : ''} | PoderBR`;
+  const titulo = `${p.nome} — ${cargo}${onde ? ` (${onde})` : ''} | Global Power Line`;
   const resumo = [`${p.nome} é ${cargo.toLowerCase()}${onde ? `, ${onde}` : ''}`, partido && `filiação: ${partido}`, d && SITUACAO[d.situacao]].filter(Boolean).join('. ') + '.';
   const url = `${SITE}p/${p.id}.html`;
   const app = `../#p=${encodeURIComponent(p.id)}`;
@@ -84,7 +84,7 @@ small{color:#52514e}
 </head>
 <body>
 <main>
-<a href="../">PoderBR</a>
+<a href="../">Global Power Line</a>
 <h1>${esc(p.nome)}</h1>
 <p>${esc(cargo)}${onde ? ` · ${esc(onde)}` : ''}${partido ? ` · ${esc(partido)}` : ''}</p>
 <p><a class="botao" href="${esc(app)}">Abrir no quadro interativo</a></p>

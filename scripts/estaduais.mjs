@@ -14,7 +14,7 @@ import { normalizarPartido, tabelaPartidos } from './partidos.mjs';
 
 const RAIZ = new URL('..', import.meta.url);
 const BASE = 'https://resultados.tse.jus.br/oficial/ele2026/6259/dados';
-const UA = { 'User-Agent': 'PoderBR/0.1 (projeto pessoal; dados publicos)' };
+const UA = { 'User-Agent': 'GPL/0.1 (projeto pessoal; dados publicos)' };
 // O Distrito Federal elege deputados distritais, com código de cargo próprio.
 const CARGO = (uf) => (uf === 'df' ? '0008' : '0007');
 

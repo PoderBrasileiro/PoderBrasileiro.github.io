@@ -60,7 +60,7 @@ function texto(xml) {
 const tag = (item, nome) => item.match(new RegExp(`<${nome}[^>]*>([\\s\\S]*?)</${nome}>`, 'i'))?.[1];
 
 async function lerFeed([veiculo, url]) {
-  const r = await fetch(url, { headers: { 'User-Agent': 'PoderBR/0.1 (projeto pessoal; leitor de RSS)' }, signal: AbortSignal.timeout(30000) });
+  const r = await fetch(url, { headers: { 'User-Agent': 'GPL/0.1 (projeto pessoal; leitor de RSS)' }, signal: AbortSignal.timeout(30000) });
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
   // Folha e UOL publicam em ISO-8859-1; ler como UTF-8 estraga os acentos.
   const bytes = new Uint8Array(await r.arrayBuffer());

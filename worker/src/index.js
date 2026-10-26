@@ -56,7 +56,7 @@ export default {
     const liberada = permitidas.includes(origem) ? origem : permitidas[0] ?? '';
 
     if (requisicao.method === 'OPTIONS') return new Response(null, { headers: cabecalhos(liberada) });
-    if (url.pathname !== '/ping') return new Response('PoderBR — contador de presença. Use /ping.', { status: 404 });
+    if (url.pathname !== '/ping') return new Response('GPL — contador de presença. Use /ping.', { status: 404 });
     if (origem && !permitidas.includes(origem)) return new Response('{"erro":"origem não permitida"}', { status: 403, headers: cabecalhos(liberada) });
 
     const obj = ambiente.PRESENCA.get(ambiente.PRESENCA.idFromName('global'));

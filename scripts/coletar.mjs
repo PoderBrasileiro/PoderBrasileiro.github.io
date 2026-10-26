@@ -19,7 +19,7 @@ import { tabelaPartidos, normalizarPartido } from './partidos.mjs';
 
 const RAIZ = new URL('..', import.meta.url);
 const SAIDA = new URL('public/data/', RAIZ);
-const UA = 'PoderBR/0.1 (projeto pessoal; dados publicos)';
+const UA = 'GPL/0.1 (projeto pessoal; dados publicos)';
 
 const MESES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho',
   'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];

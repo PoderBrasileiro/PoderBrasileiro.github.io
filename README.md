@@ -1,7 +1,12 @@
-# PoderBR
+# Global Power Line
 
-Quadro interativo de quem ocupa o poder no Brasil: presidente, vice, ministros,
-ministros do STF, governadores, senadores, deputados federais e prefeitos. Três visões dos mesmos dados — **mapa**, **rede de
+Quem ocupa o poder, em duas escalas.
+
+**O mundo:** quem governa cada um dos 195 países, há quanto tempo está no cargo
+e onde o partido fica entre esquerda e direita.
+
+**O Brasil por dentro:** presidente, vice, ministros, ministros do STF,
+governadores, senadores, deputados federais, estaduais e prefeitos. Três visões dos mesmos dados — **mapa**, **rede de
 poder** (quadro dos três poderes × União, estados e municípios) e **lista** — e uma ficha por pessoa com
 posição esquerda × direita e links de investigações e notícias.
 
@@ -17,6 +22,7 @@ npm run dev        # abre em http://localhost:5173
 ## Atualizando os dados
 
 ```bash
+npm run mundo      # quem governa os 195 países -> mundo.json e mundo-malha.json
 npm run coletar    # cargos, mapa e votações  -> public/data/brasil.json, malha.json
 npm run eleicao    # transição 2027: resultado de 2026 x quem está no cargo -> eleicao2026.json
 npm run pecs       # PECs: estágio e voto nominal de cada parlamentar -> pecs.json
@@ -39,6 +45,9 @@ de uma tabela da Wikipédia, e se o formato dela mudar o parser quebra.
 | Transição 2027 (⇄) | resultado oficial do TSE da eleição de 2026, casado por nome com os ocupantes atuais |
 | PECs (estágio e votos) | Dados Abertos da Câmara e do Senado |
 | Eleitos de 2026 que ainda não assumiram | resultado oficial do TSE (os que não ocupam cargo hoje) |
+| Quem governa cada país | Wikidata |
+| Posição dos partidos no mundo | Global Party Survey 2019 (domínio público) |
+| Mapa-múndi | Natural Earth, via world-atlas |
 | Mapa e UFs | IBGE |
 | Presidente e vice | `data/manual.json` |
 | Posição dos partidos | `data/partidos.json` |

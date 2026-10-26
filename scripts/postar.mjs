@@ -296,14 +296,14 @@ async function postsDeEstreia() {
   const capa = cartaoSite();
   itens.push({
     id: 'estreia:fixado', data: hoje, fixar: true,
-    texto: montar('Quem ocupa o poder no Brasil, num quadro só: presidente, ministros, STF, governadores, senadores, deputados e os prefeitos das 5.569 cidades.',
+    texto: montar('Quem governa cada um dos 195 países do mundo, e há quanto tempo. E o Brasil por dentro: Congresso, STF, governos estaduais e as 5.569 prefeituras.',
       'Dados públicos, atualizados todo dia. Sem vínculo com governo ou partido.',
       SITE, ['#Brasil', '#Congresso']),
     imagem: {
       png: capa, arquivo: 'poderbr.png', destino: '',
-      titulo: 'Quem ocupa o poder no Brasil',
-      descricao: 'Presidente, ministros, STF, governadores, senadores, deputados e os prefeitos das 5.569 cidades, num quadro só.',
-      alt: 'Cartão do PoderBR: o título “Quem ocupa o poder no Brasil” sobre o semicírculo do Senado, com 81 cadeiras da esquerda (vermelho) para a direita (azul).',
+      titulo: 'Quem ocupa o poder',
+      descricao: '195 países e há quanto tempo cada um está no mesmo governo. E o Brasil por dentro, cargo por cargo.',
+      alt: 'Cartão do Global Power Line: o título “Quem ocupa o poder” sobre o semicírculo do Senado, com 81 cadeiras da esquerda (vermelho) para a direita (azul).',
     },
   });
 

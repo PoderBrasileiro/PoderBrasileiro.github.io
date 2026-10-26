@@ -145,7 +145,7 @@ function desenharLegenda() {
       el.replaceChildren(
         h('div', { class: 'legenda-item' }, h('span', {}, 'esquerda'), h('span', { class: 'legenda-rampa' }), h('span', {}, 'direita')),
         h('div', { class: 'legenda-item' }, h('span', { class: 'legenda-hachura' }), h('span', {}, 'Sem posição conhecida')),
-        h('div', { class: 'legenda-item fraco' }, 'Posição do partido que governa, pelo Global Party Survey de 2019'));
+        h('div', { class: 'legenda-item fraco' }, 'Posição do partido que governa, por survey com especialistas de 2019 — partido criado depois não tem nota'));
     }
     return;
   }
@@ -245,6 +245,10 @@ document.getElementById('metodologia').append(
   h('ul', {},
     h('li', {}, h('b', {}, 'Posição do partido: '), dados.fontePartidos, ' A porcentagem é só essa nota convertida (nota 7 = 70% direita). Vale para o partido inteiro, não para a pessoa. Nas cores, o vermelho e o azul cheios aparecem a partir de 2 e de 8: no intervalo todo, como nenhum partido com gente em cargo chega perto das pontas, tudo sairia cinzento.'),
     h('li', {}, h('b', {}, 'Voto no plenário (só senadores): '), `nas votações nominais em que a maioria do ${dados.votos.poloEsquerda} e a maioria do ${dados.votos.poloDireita} ficaram em lados opostos, de que lado o senador votou. Mede alinhamento de voto, não ideologia.`)),
+  h('h4', {}, 'O mundo'),
+  h('p', {}, 'Quem governa cada país e desde quando vêm da ', link('Wikidata', 'https://www.wikidata.org/'), ', editada por voluntários: em país com troca rápida de governo ela pode estar atrasada, e cada ficha leva ao item de lá para conferir e corrigir. A posição de esquerda e direita vem do ', link('Global Party Survey 2019', 'https://doi.org/10.7910/DVN/WMGTNS'), ', survey com cientistas políticos de cada país, em domínio público — cobre 92 dos 195 e não inclui partido criado depois de 2019.'),
+  h('p', {}, 'Duas ressalvas que mudam a leitura do mapa. A primeira: ninguém classifica país, classifica partido — a cor mostra a posição de quem governa hoje, não uma medida do país. A segunda: o número do mundo e o do Brasil vêm de estudos diferentes, na mesma régua de 0 a 10 e na mesma direção, mas não devem ser comparados número a número.'),
+  h('p', {}, 'No modo “tempo no poder”, monarca hereditário fica fora do ranking: herdar o trono não é a mesma coisa que não sair do poder.'),
   h('h4', {}, 'As cinco faixas'),
   h('p', {}, 'Esquerda até 3, centro-esquerda até 4,5, centro até 5,5, centro-direita até 7, direita acima disso. Os cortes são escolha deste site: o artigo dá uma nota por partido e não divide em faixas. Foram postos onde a distribuição real tem folga — não existe partido com gente em cargo entre 5,3 e 6,3 —, e não em quintos iguais da régua. Nos posts a conta é só de dois lados, abaixo ou acima de 5.'),
   h('h4', {}, 'Porcentagem de esquerda e direita'),

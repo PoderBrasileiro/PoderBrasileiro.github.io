@@ -27,7 +27,7 @@ const ELEICAO_FEDERAL = '6257';    // presidente
 const ELEICAO_ESTADUAL = '6259';   // governador, senador, deputados
 const SEGUNDO_TURNO = { [ELEICAO_FEDERAL]: '6258', [ELEICAO_ESTADUAL]: '6260' };
 const DATA_2T = '25/10';
-const UA = { 'User-Agent': 'PoderBR/0.1 (projeto pessoal; dados publicos)' };
+const UA = { 'User-Agent': 'GPL/0.1 (projeto pessoal; dados publicos)' };
 const CARGO = { presidente: '0001', governador: '0003', senador: '0005', deputado: '0006' };
 const NOME_CARGO = { presidente: 'presidente', governador: 'governador(a)', senador: 'senador(a)', deputado: 'deputado(a) federal' };
 

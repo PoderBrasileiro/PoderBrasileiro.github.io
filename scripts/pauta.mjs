@@ -52,7 +52,7 @@ export async function paginaDoCartao({ slug, titulo, descricao, imagem, alt, des
   const cabeca = [
     `<link rel="canonical" href="${esc(url)}">`,
     `<meta property="og:type" content="article">`,
-    `<meta property="og:site_name" content="PoderBR">`,
+    `<meta property="og:site_name" content="Global Power Line">`,
     `<meta property="og:title" content="${esc(titulo)}">`,
     `<meta property="og:description" content="${esc(descricao)}">`,
     `<meta property="og:url" content="${esc(url)}">`,
@@ -61,13 +61,13 @@ export async function paginaDoCartao({ slug, titulo, descricao, imagem, alt, des
     `<meta name="twitter:card" content="summary_large_image">`,
   ].join('\n');
   const corpo = `
-<p><a href="../">PoderBR</a></p>
+<p><a href="../">Global Power Line</a></p>
 <h1>${esc(titulo)}</h1>
 <p class="fraco">${esc(descricao)}</p>
 <p><img src="../cartoes/${esc(imagem)}" alt="${esc(alt)}"></p>
 <p><a class="botao" href="../${esc(destino ?? '#rede')}">Ver no quadro interativo</a></p>
 <p class="fraco">Dados públicos da Câmara, do Senado, do TSE e do IBGE. A posição de esquerda e direita é a do partido de cada pessoa, segundo classificação de cientistas políticos — não é uma medida individual.</p>`;
-  await writeFile(new URL(`public/c/${slug}.html`, RAIZ), pagina(`${titulo} | PoderBR`, descricao, cabeca, corpo));
+  await writeFile(new URL(`public/c/${slug}.html`, RAIZ), pagina(`${titulo} | Global Power Line`, descricao, cabeca, corpo));
   return url;
 }
 
@@ -88,7 +88,7 @@ export async function paginaDaPauta(itens, { site, data, proximoRetrato }) {
 </section>`).join('\n');
 
   const corpo = `
-<p><a href="../">PoderBR</a></p>
+<p><a href="../">Global Power Line</a></p>
 <h1>Pauta de ${esc(data)}</h1>
 <p class="fraco">Clique em <b>Copiar texto</b> e cole no X, ou use <b>Abrir no X</b> que já vai preenchido. A imagem aparece sozinha na prévia do link — não precisa baixar nem anexar.</p>
 ${itens.length ? blocos : `<section><h2>Nada para postar hoje</h2><p class="fraco">O próximo retrato sai em ${esc(proximoRetrato ?? '—')}.</p></section>`}
@@ -114,6 +114,6 @@ document.addEventListener('click', async (e) => {
 });
 </script>`;
   const extra = `<meta name="robots" content="noindex">\n<style>pre{white-space:pre-wrap;word-break:break-word;background:#262624;border:1px solid #3a3a37;border-radius:10px;padding:14px;font:15px/1.5 inherit}section{border-top:1px solid #3a3a37;padding-top:20px;margin-top:24px}hr{border:0;border-top:1px solid #3a3a37;margin:32px 0 16px}</style>`;
-  await writeFile(new URL('public/pauta/index.html', RAIZ), pagina(`Pauta de ${data} | PoderBR`, 'Posts do dia, prontos para copiar.', extra, corpo));
+  await writeFile(new URL('public/pauta/index.html', RAIZ), pagina(`Pauta de ${data} | Global Power Line`, 'Posts do dia, prontos para copiar.', extra, corpo));
   return `${site}pauta/`;
 }

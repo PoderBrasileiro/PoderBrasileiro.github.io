@@ -88,7 +88,7 @@ function cartaoPlenario({ titulo, subtitulo, gente, linhas, raioBola, rodape }) 
   const svg = [
     `<rect width="${L}" height="${A}" fill="${COR.fundo}"/>`,
     marca(54, 58, 13),
-    txt(104, 50, 'PoderBR', { tam: 27, peso: 'bold' }),
+    txt(104, 50, 'Global Power Line', { tam: 25, peso: 'bold' }),
     txt(104, 78, 'poderbrasileiro.github.io', { tam: 19, cor: COR.texto3 }),
     txt(L / 2, 150, titulo, { tam: 54, peso: 'bold', ancora: 'middle' }),
     txt(L / 2, 196, subtitulo, { tam: 36, cor: COR.texto2, ancora: 'middle' }),
@@ -152,11 +152,11 @@ export function cartaoSite() {
   const svg = [
     `<rect width="${L}" height="${A}" fill="${COR.fundo}"/>`,
     marca(58, 62, 14),
-    txt(110, 54, 'PoderBR', { tam: 30, peso: 'bold' }),
-    txt(L / 2, 160, 'Quem ocupa o poder no Brasil', { tam: 52, peso: 'bold', ancora: 'middle' }),
-    txt(L / 2, 206, 'Presidente, ministros, STF, governadores, senadores, deputados e prefeitos', { tam: 24, cor: COR.texto2, ancora: 'middle' }),
+    txt(110, 54, 'Global Power Line', { tam: 28, peso: 'bold' }),
+    txt(L / 2, 160, 'Quem ocupa o poder', { tam: 54, peso: 'bold', ancora: 'middle' }),
+    txt(L / 2, 206, '195 países e há quanto tempo cada um está no mesmo governo', { tam: 24, cor: COR.texto2, ancora: 'middle' }),
     bolas,
-    txt(L / 2, A - 34, 'Mapa, três poderes, votos em PECs e a transição para 2027 · dados públicos', { tam: 22, cor: COR.texto3, ancora: 'middle' }),
+    txt(L / 2, A - 34, 'E o Brasil por dentro: Congresso, STF, governos e as 5.569 prefeituras', { tam: 22, cor: COR.texto3, ancora: 'middle' }),
   ].join('');
   return png(svg, L, A);
 }
@@ -182,7 +182,7 @@ export function cartaoBarra(cargo) {
   const svg = [
     `<rect width="${L}" height="${A}" fill="${COR.fundo}"/>`,
     marca(54, 58, 13),
-    txt(104, 50, 'PoderBR', { tam: 27, peso: 'bold' }),
+    txt(104, 50, 'Global Power Line', { tam: 25, peso: 'bold' }),
     txt(104, 78, 'poderbrasileiro.github.io', { tam: 19, cor: COR.texto3 }),
     txt(L / 2, 168, `${g.titulo} hoje`, { tam: 54, peso: 'bold', ancora: 'middle' }),
     txt(L / 2, 216, `${b.esq}% esquerda · ${b.dir}% direita`, { tam: 36, cor: COR.texto2, ancora: 'middle' }),
@@ -217,7 +217,7 @@ export function cartaoContagem() {
   const svg = [
     `<rect width="${L}" height="${A}" fill="${COR.fundo}"/>`,
     marca(54, 58, 13),
-    txt(104, 50, 'PoderBR', { tam: 27, peso: 'bold' }),
+    txt(104, 50, 'Global Power Line', { tam: 25, peso: 'bold' }),
     txt(104, 78, 'poderbrasileiro.github.io', { tam: 19, cor: COR.texto3 }),
     txt(L / 2, 230, String(dias), { tam: 150, peso: 'bold', ancora: 'middle' }),
     txt(L / 2, 285, dias === 1 ? 'dia para o 2º turno' : 'dias para o 2º turno', { tam: 40, cor: COR.texto2, ancora: 'middle' }),
@@ -247,8 +247,8 @@ function banner() {
       <feDropShadow dx="0" dy="2" stdDeviation="9" flood-color="#000" flood-opacity="0.55"/>
     </filter></defs>`,
     `<rect width="${L}" height="${A}" fill="url(#g)"/>`,
-    `<g filter="url(#sombra)">${marca(L - 362, 92, 17)}`,
-    txt(L - 60, 104, 'PoderBR', { tam: 50, peso: 'bold', ancora: 'end' }),
+    `<g filter="url(#sombra)">${marca(L - 560, 92, 16)}`,
+    txt(L - 60, 104, 'Global Power Line', { tam: 42, peso: 'bold', ancora: 'end' }),
     '</g>',
     `<g filter="url(#sombra)">${txt(L - 60, 150, 'poderbrasileiro.github.io', { tam: 22, cor: '#ffffff', ancora: 'end' })}</g>`,
   ].join('');
