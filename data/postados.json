@@ -44,7 +44,16 @@
   "pec:senado-170850:2026-07-14:102",
   "pec:senado-170850:2026-07-14:79"
  ],
- "pendentes": {},
+ "pendentes": {
+  "2turno:presidente": true,
+  "2turno:governador:AC": true,
+  "2turno:governador:AM": true,
+  "2turno:governador:DF": true,
+  "2turno:governador:ES": true,
+  "2turno:governador:RN": true,
+  "2turno:governador:TO": true,
+  "2turno:governador:RJ": true
+ },
  "etapas": {
   "camara-2140446": "plenario",
   "camara-2388817": "comissao",
@@ -269,18 +278,35 @@
    "estreia:2027-deputado",
    "estreia:contagem-2026-10-08",
    "retrato:deputado:2026-10-10",
-   "2turno:governador:RJ",
    "retrato:governador:2026-10-12",
    "retrato:ministro:2026-10-14",
    "pec:senado-174386:2026-10-14:88",
    "pec:senado-174386:2026-10-14:87",
+   "2turno:presidente",
    "2turno:governador:AC",
    "2turno:governador:AM",
-   "2turno:governador:DF",
-   "2turno:governador:ES",
-   "2turno:governador:RN",
-   "2turno:governador:TO",
-   "2turno:presidente"
+   "2turno:governador:DF"
+  ]
+ },
+ "pautaDoDia": {
+  "data": "2026-10-26",
+  "itens": [
+   {
+    "tipo": "Resultado do 2º turno",
+    "texto": "2º turno — Presidência da República: eleito(a) Lula (PT), com 51,79% dos votos válidos.\n\nVice: Geraldo Alckmin.\n\nQuem fica e quem sai em 2027: https://poderbrasileiro.github.io/#rede\n#Eleições2026 #SegundoTurno"
+   },
+   {
+    "tipo": "Resultado do 2º turno",
+    "texto": "2º turno — Governo de AC: eleito(a) Mailza Assis (PP), com 66,21% dos votos válidos.\n\nVice: Jessica Sales.\n\nQuem fica e quem sai em 2027: https://poderbrasileiro.github.io/#rede\n#Eleições2026 #SegundoTurno #Acre"
+   },
+   {
+    "tipo": "Resultado do 2º turno",
+    "texto": "2º turno — Governo de AM: eleito(a) Omar Aziz (PSD), com 61,42% dos votos válidos.\n\nVice: Alessandra Campelo.\n\nQuem fica e quem sai em 2027: https://poderbrasileiro.github.io/#rede\n#Eleições2026 #SegundoTurno #Amazonas"
+   },
+   {
+    "tipo": "Resultado do 2º turno",
+    "texto": "2º turno — Governo de DF: eleito(a) Celina Leão (PP), com 57,18% dos votos válidos.\n\nVice: Gustavo Rocha.\n\nQuem fica e quem sai em 2027: https://poderbrasileiro.github.io/#rede\n#Eleições2026 #SegundoTurno #DistritoFederal"
+   }
   ]
  }
 }

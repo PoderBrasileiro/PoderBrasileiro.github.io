@@ -71,11 +71,19 @@ async function disputa(eleicao, abr, cargo) {
   const t1 = await json(arq(eleicao));
   if (!t1) throw new Error(`sem resultado de ${cargo} em ${abr}`);
   let cands = ler(t1);
-  // Se o 2º turno já foi apurado, ele decide quem é o eleito.
+  // Se o 2º turno já foi apurado, ele decide quem é o eleito — e a
+  // porcentagem passa a ser a dele. Antes só o "eleito" era trocado e o
+  // percentual continuava sendo o do 1º turno: Lula aparecia com 45,16% num
+  // 2º turno que ele venceu com 51,79%.
   if (cands.some((c) => c.segundoTurno)) {
     const t2 = await json(arq(SEGUNDO_TURNO[eleicao]));
-    const vencedor = t2 && ler(t2).find((c) => c.eleito);
-    if (vencedor) cands = cands.map((c) => ({ ...c, segundoTurno: false, eleito: c.chaveCompleta === vencedor.chaveCompleta }));
+    const doSegundo = t2 ? ler(t2) : [];
+    if (doSegundo.some((c) => c.eleito)) {
+      cands = cands.map((c) => {
+        const no2 = doSegundo.find((x) => x.chaveCompleta === c.chaveCompleta);
+        return { ...c, ...(no2 ? { pct: no2.pct, eleito: no2.eleito } : { eleito: false }), segundoTurno: false, turno: no2 ? 2 : 1 };
+      });
+    }
   }
   return cands;
 }

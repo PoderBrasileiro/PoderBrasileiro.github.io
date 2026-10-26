@@ -188,7 +188,7 @@ async function postarNoX(texto, chaves, imagem = null) {
 
 // ---------- principal ----------
 
-const estado = { postados: [], pendentes: {}, etapas: {}, composicao: {}, feitos: {}, ...(await ler(ESTADO, {})) };
+const estado = { postados: [], pendentes: {}, etapas: {}, composicao: {}, feitos: {}, pautaDoDia: {}, ...(await ler(ESTADO, {})) };
 // Os 43 itens antigos valem pros três canais: são votações de 2025 que não
 // devem reaparecer em lugar nenhum.
 for (const canal of ['x', 'bsky', 'relatorio']) estado.feitos[canal] ??= [...estado.postados];
@@ -360,9 +360,14 @@ if (process.argv.includes('--estreia')) {
 }
 
 const novos = (canal) => (repetir ? pauta : pauta.filter((p) => !(estado.feitos[canal] ?? []).includes(p.id)));
+const CANAIS = ['x', 'bsky', 'relatorio'];
 const marcar = (canal, item) => {
   (estado.feitos[canal] ??= []).push(item.id);
-  if (item.resolve) delete estado.pendentes[item.resolve];
+  // A disputa só sai da lista de pendentes quando TODOS os canais a
+  // publicaram. Antes o primeiro canal a marcar apagava o pendente e os
+  // outros nunca mais viam o item — foi assim que o resultado do 2º turno
+  // sumiu da pauta depois de sair no ensaio.
+  if (item.resolve && CANAIS.every((c) => (estado.feitos[c] ?? []).includes(item.id))) delete estado.pendentes[item.resolve];
   if (item.cargo) estado.composicao = { cargo: item.cargo, quando: hoje };
 };
 
@@ -376,9 +381,10 @@ if (process.argv.includes('--relatorio')) {
   await mkdir(new URL('public/cartoes/', RAIZ), { recursive: true });
 
   const TIPOS = { retrato: 'Retrato do dia', pec: 'Votação de PEC', etapa: 'PEC avançou', troca: 'Troca de cargo', '2turno': 'Resultado do 2º turno', estreia: 'Estreia' };
-  const paraPagina = [];
-  const linhas = [`# Pauta de ${dataBr(hoje)}`, '', `Mais fácil pela página: ${SITE}pauta/`, ''];
-  if (!itens.length) linhas.push('Nada para postar hoje.', '', `Último retrato: ${estado.composicao.quando ?? '—'}.`);
+  // A pauta acumula dentro do dia. Nas noites de apuração o workflow roda de
+  // hora em hora, e antes cada execução reescrevia o arquivo: os oito posts do
+  // 2º turno foram gerados e apagados pela execução seguinte.
+  if (estado.pautaDoDia.data !== hoje) estado.pautaDoDia = { data: hoje, itens: [] };
 
   for (const [n, item] of itens.entries()) {
     const tipo = TIPOS[item.id.split(':')[0]] ?? item.id.split(':')[0];
@@ -398,19 +404,25 @@ if (process.argv.includes('--relatorio')) {
       item.texto = item.texto.replace(/https?:\/\/\S+/, url);
       item.previa = item.imagem.arquivo;
     }
-    linhas.push(`## ${n + 1}. ${tipo}${item.fixar ? ' — fixe este no perfil' : ''}`, '',
-      `${contarComoNoX(item.texto)} de 280 caracteres (o X conta todo link como 23)`, '',
-      '~~~', item.texto, '~~~', '');
-    if (item.previa) linhas.push('A imagem entra sozinha pela prévia do link; não precisa anexar.', '');
-    paraPagina.push({ tipo, texto: item.texto, fixar: item.fixar, previa: item.previa, alt: item.imagem?.alt });
+    estado.pautaDoDia.itens.push({ tipo, texto: item.texto, fixar: item.fixar, previa: item.previa, alt: item.imagem?.alt });
     marcar('relatorio', item);
+  }
+
+  const doDia = estado.pautaDoDia.itens;
+  const linhas = [`# Pauta de ${dataBr(hoje)}`, '', `Mais fácil pela página: ${SITE}pauta/`, ''];
+  if (!doDia.length) linhas.push('Nada para postar hoje.', '', `Último retrato: ${estado.composicao.quando ?? '—'}.`);
+  for (const [n, it] of doDia.entries()) {
+    linhas.push(`## ${n + 1}. ${it.tipo}${it.fixar ? ' — fixe este no perfil' : ''}`, '',
+      `${contarComoNoX(it.texto)} de 280 caracteres (o X conta todo link como 23)`, '',
+      '~~~', it.texto, '~~~', '');
+    if (it.previa) linhas.push('A imagem entra sozinha pela prévia do link; não precisa anexar.', '');
   }
 
   linhas.push('---', '', 'Refeita sozinha todo dia. O que já apareceu aqui não volta em pautas futuras.');
   const texto = linhas.join('\n').replaceAll('~~~', '```') + '\n';
   await writeFile(new URL(`relatorios/${hoje}.md`, RAIZ), texto);
   await writeFile(new URL('PAUTA.md', RAIZ), texto);
-  const endereco = await paginaDaPauta(paraPagina, { site: SITE, data: dataBr(hoje), proximoRetrato: estado.composicao.quando ?? '—' });
+  const endereco = await paginaDaPauta(doDia, { site: SITE, data: dataBr(hoje), proximoRetrato: estado.composicao.quando ?? '—' });
   await gravar();
   console.log(texto);
   console.log(`Pauta em ${endereco} (e em relatorios/${hoje}.md)`);
