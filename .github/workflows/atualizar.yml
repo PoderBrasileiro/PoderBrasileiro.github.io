@@ -44,6 +44,10 @@ jobs:
         continue-on-error: true
       - run: npm run mundo
         continue-on-error: true
+      # Quem governa cada estado e província. Consulta pesada na Wikidata: às
+      # vezes volta cortada e falha, e aí fica o dado da véspera.
+      - run: npm run subnacional
+        continue-on-error: true
       - run: npm run estaduais
         continue-on-error: true
       - run: npm run historico

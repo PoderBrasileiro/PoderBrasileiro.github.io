@@ -1,5 +1,40 @@
 {
-  "_leia": "Posição de partido que governa e que a Wikidata não classifica. Só entra o que dá pra justificar numa linha e checar na fonte. A chave é o código ISO de 2 letras do país; o site mostra essas entradas como 'classificação deste site', separadas do que vem da Wikidata. Faixas válidas: esquerda, centro-esquerda, centro, centro-direita, direita.",
+  "_leia": "Completa o que a Wikidata não resolve, e só com coisa que dá pra justificar numa linha e checar na fonte. A chave é o código ISO de 2 letras do país. Duas coisas diferentes entram aqui. (1) 'faixa' + 'motivo' + 'fonte': a posição de um partido que a Wikidata não classifica, OU a de quem governa sem filiação formal mas foi eleito por um partido ou movimento conhecido — o site mostra como 'classificação deste site', separada do resto. (2) 'semPartido': por que não há partido, que é informação de verdade e não falta de dado. Tipos: monarquia (partidos proibidos ou inexistentes), transicao (junta ou governo provisório), sem-legenda (há partidos no país, o governante é que não tem), colegiado (governo de coalizão permanente), apartidario (parlamento sem partidos). Faixas válidas: esquerda, centro-esquerda, centro, centro-direita, direita.",
+  "RU": {
+    "faixa": "direita",
+    "motivo": "Vladimir Putin não tem filiação formal desde 2012, mas governa com a Rússia Unida, que tem maioria constitucional na Duma, o apoiou em todas as eleições e é classificada como conservadora e nacionalista. O principal partido de oposição com bancada é o Partido Comunista.",
+    "fonte": "https://pt.wikipedia.org/wiki/R%C3%BAssia_Unida"
+  },
+  "CL": {
+    "faixa": "direita",
+    "motivo": "José Antonio Kast foi eleito em 2025 pelo Partido Republicano, que ele mesmo fundou, e renunciou à filiação ao assumir em março de 2026. O partido é de direita.",
+    "fonte": "https://www.bcn.cl/historiapolitica/resenas_biograficas/wiki/Jos%C3%A9_Antonio_Kast_Rist"
+  },
+  "CO": {
+    "faixa": "direita",
+    "motivo": "Abelardo de la Espriella foi eleito em 2026 pelo movimento Defensores de la Patria, que criou para a candidatura, de programa de direita e lei e ordem.",
+    "fonte": "https://www.cidob.org/lider-politico/abelardo-espriella-otero"
+  },
+  "BO": {
+    "faixa": "centro-direita",
+    "motivo": "Rodrigo Paz foi eleito em 2025 pelo Partido Demócrata Cristiano, de democracia cristã.",
+    "fonte": "https://es.wikipedia.org/wiki/Partido_Dem%C3%B3crata_Cristiano_(Bolivia)"
+  },
+  "RO": {
+    "faixa": "centro",
+    "motivo": "Nicușor Dan concorreu e venceu em 2025 como independente. Fundou o movimento que viria a ser a USR, de centro e pró-europeu, e deixou o partido em 2017.",
+    "fonte": "https://en.wikipedia.org/wiki/Nicu%C8%99or_Dan"
+  },
+  "UA": {
+    "faixa": "centro",
+    "motivo": "Volodymyr Zelensky deixou a filiação ao assumir, mas foi eleito pelo Servo do Povo, que tem maioria na Rada e é de centro.",
+    "fonte": "https://en.wikipedia.org/wiki/Servant_of_the_People_(political_party)"
+  },
+  "EG": {
+    "faixa": "direita",
+    "motivo": "Abdel Fattah al-Sisi concorre como independente, mas o governo se apoia no Mostaqbal Watn, que tem a maioria do Parlamento e é nacionalista e conservador.",
+    "fonte": "https://en.wikipedia.org/wiki/Nation%27s_Future_Party"
+  },
   "PL": {
     "partido": "Coalizão Cívica",
     "faixa": "centro-direita",
@@ -41,5 +76,226 @@
     "faixa": "centro-esquerda",
     "motivo": "Partido trabalhista de origem sindical, social-democrata.",
     "fonte": "https://en.wikipedia.org/wiki/Antigua_Labour_Party"
+  },
+  "GQ": {
+    "faixa": "direita",
+    "motivo": "Partido dominante desde 1987 (PDGE), conservador e nacionalista. A Wikidata traz o nome antigo da legenda.",
+    "fonte": "https://en.wikipedia.org/wiki/Democratic_Party_of_Equatorial_Guinea"
+  },
+  "BI": {
+    "partido": "Conselho Nacional para a Defesa da Democracia – Forças para a Defesa da Democracia",
+    "faixa": "centro-esquerda",
+    "motivo": "Ex-movimento armado hutu, hoje partido dominante de programa social-democrata declarado.",
+    "fonte": "https://en.wikipedia.org/wiki/National_Council_for_the_Defense_of_Democracy_%E2%80%93_Forces_for_the_Defense_of_Democracy"
+  },
+  "DJ": {
+    "partido": "People's Rally for Progress",
+    "faixa": "centro-direita",
+    "motivo": "Partido único até 1992 e dominante desde então, de programa conservador e liberal na economia.",
+    "fonte": "https://en.wikipedia.org/wiki/People%27s_Rally_for_Progress"
+  },
+  "SA": {
+    "semPartido": {
+      "tipo": "monarquia",
+      "motivo": "Monarquia absoluta. Partidos políticos são proibidos e não há eleições nacionais."
+    }
+  },
+  "QA": {
+    "semPartido": {
+      "tipo": "monarquia",
+      "motivo": "Monarquia absoluta. Partidos políticos são proibidos."
+    }
+  },
+  "AE": {
+    "semPartido": {
+      "tipo": "monarquia",
+      "motivo": "Federação de monarquias. Partidos políticos são proibidos."
+    }
+  },
+  "OM": {
+    "semPartido": {
+      "tipo": "monarquia",
+      "motivo": "Monarquia absoluta. Partidos políticos são proibidos."
+    }
+  },
+  "BN": {
+    "semPartido": {
+      "tipo": "monarquia",
+      "motivo": "Monarquia absoluta sob estado de emergência desde 1962; os partidos estão suspensos."
+    }
+  },
+  "SZ": {
+    "semPartido": {
+      "tipo": "monarquia",
+      "motivo": "Monarquia absoluta. Partidos estão proibidos de disputar eleições desde 1973."
+    }
+  },
+  "BH": {
+    "semPartido": {
+      "tipo": "monarquia",
+      "motivo": "Monarquia. Partidos são proibidos; existem “sociedades políticas” sem poder de governo."
+    }
+  },
+  "KW": {
+    "semPartido": {
+      "tipo": "monarquia",
+      "motivo": "Monarquia. Partidos não têm reconhecimento legal; o governo é nomeado pelo emir."
+    }
+  },
+  "JO": {
+    "semPartido": {
+      "tipo": "monarquia",
+      "motivo": "Monarquia. O primeiro-ministro é nomeado pelo rei e não vem de uma maioria partidária."
+    }
+  },
+  "VA": {
+    "semPartido": {
+      "tipo": "monarquia",
+      "motivo": "Monarquia eletiva da Santa Sé. Não há partidos nem disputa eleitoral."
+    }
+  },
+  "MC": {
+    "semPartido": {
+      "tipo": "monarquia",
+      "motivo": "O ministro de Estado é nomeado pelo príncipe, de fora da disputa partidária."
+    }
+  },
+  "ML": {
+    "semPartido": {
+      "tipo": "transicao",
+      "motivo": "Governo militar desde o golpe de 2020; partidos suspensos em 2024."
+    }
+  },
+  "BF": {
+    "semPartido": {
+      "tipo": "transicao",
+      "motivo": "Governo militar desde o golpe de 2022; atividade partidária suspensa."
+    }
+  },
+  "GN": {
+    "semPartido": {
+      "tipo": "transicao",
+      "motivo": "Governo de transição desde o golpe de 2021."
+    }
+  },
+  "GW": {
+    "semPartido": {
+      "tipo": "transicao",
+      "motivo": "Governo de transição desde o golpe de novembro de 2025."
+    }
+  },
+  "SD": {
+    "semPartido": {
+      "tipo": "transicao",
+      "motivo": "Governo militar em meio à guerra civil iniciada em 2023."
+    }
+  },
+  "LY": {
+    "semPartido": {
+      "tipo": "transicao",
+      "motivo": "Dois governos rivais desde 2014; nenhum saiu de eleição nacional."
+    }
+  },
+  "SY": {
+    "semPartido": {
+      "tipo": "transicao",
+      "motivo": "Governo de transição formado após a queda de Bashar al-Assad, em dezembro de 2024."
+    }
+  },
+  "HT": {
+    "semPartido": {
+      "tipo": "transicao",
+      "motivo": "Conselho presidencial de transição; não há presidente nem parlamento eleitos desde 2021."
+    }
+  },
+  "CH": {
+    "semPartido": {
+      "tipo": "colegiado",
+      "motivo": "O Conselho Federal é colegiado e reúne quatro partidos de lados diferentes do espectro, por fórmula fixa. Não há um partido no governo: há todos."
+    }
+  },
+  "TV": {
+    "semPartido": {
+      "tipo": "apartidario",
+      "motivo": "Não há partidos políticos; o parlamento se organiza por alianças pessoais."
+    }
+  },
+  "PW": {
+    "semPartido": {
+      "tipo": "apartidario",
+      "motivo": "Não há partidos políticos ativos."
+    }
+  },
+  "FM": {
+    "semPartido": {
+      "tipo": "apartidario",
+      "motivo": "Não há partidos políticos; os candidatos concorrem como independentes."
+    }
+  },
+  "MH": {
+    "semPartido": {
+      "tipo": "apartidario",
+      "motivo": "Não há partidos formais; o parlamento se organiza em blocos informais."
+    }
+  },
+  "NR": {
+    "semPartido": {
+      "tipo": "apartidario",
+      "motivo": "Os partidos têm papel mínimo; quase todos os deputados são independentes."
+    }
+  },
+  "KI": {
+    "semPartido": {
+      "tipo": "apartidario",
+      "motivo": "Os partidos são agrupamentos frouxos, sem estrutura formal."
+    }
+  },
+  "SB": {
+    "semPartido": {
+      "tipo": "apartidario",
+      "motivo": "Os partidos são fracos e o governo se forma por coligação de independentes."
+    }
+  },
+  "TO": {
+    "semPartido": {
+      "tipo": "apartidario",
+      "motivo": "O parlamento é majoritariamente de nobres e independentes."
+    }
+  },
+  "BY": {
+    "semPartido": {
+      "tipo": "sem-legenda",
+      "motivo": "Alexander Lukashenko governa sem filiação desde 1994 e nunca criou um partido de governo."
+    }
+  },
+  "IR": {
+    "semPartido": {
+      "tipo": "sem-legenda",
+      "motivo": "Os partidos são frouxos e precisam de aval do Conselho de Guardiães; presidentes concorrem como independentes ligados a correntes."
+    }
+  },
+  "LB": {
+    "semPartido": {
+      "tipo": "sem-legenda",
+      "motivo": "O governo é repartido por confissão religiosa; presidente e primeiro-ministro são escolhidos por acordo entre blocos."
+    }
+  },
+  "TN": {
+    "semPartido": {
+      "tipo": "sem-legenda",
+      "motivo": "Kaïs Saïed concorreu como independente e dissolveu o Parlamento em 2021."
+    }
+  },
+  "BJ": {
+    "semPartido": {
+      "tipo": "sem-legenda",
+      "motivo": "Presidente eleito sem filiação formal, com apoio dos partidos da base."
+    }
+  },
+  "RS": {
+    "semPartido": {
+      "tipo": "sem-legenda",
+      "motivo": "Cargo exercido sem filiação formal, com apoio da maioria no parlamento."
+    }
   }
 }

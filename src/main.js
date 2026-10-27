@@ -55,11 +55,15 @@ const acoes = {
   aoEscolherUf: (uf) => selecionar({ uf }),
   aoVerMinistros: () => selecionar({ ministros: true }),
   aoEscolherPais: (pais) => selecionar({ pais }),
+  // A divisão guarda o país junto: o painel precisa dele pra dizer quem
+  // governa o país quando não se sabe quem governa a divisão.
+  aoEscolherDivisao: (divisao, sobre) => selecionar({ divisao, sobreDivisao: sobre }),
   aoVerBrasil: () => { abrirAba('mapa'); selecionar({}); },
   aoAbrirPais: (pais) => { abrirAba('mundo'); mundoVis?.abrirPais(pais); },
   linkAtual: () => linkDe(selecaoAtual),
   carregarMalhaUf: (uf) => carregar(`malhas/${uf}.json`),
   carregarDivisoes: (iso) => carregar(`div/${iso}.json`),
+  carregarSubnacional: () => carregar('subnacional.json'),
 };
 
 const mapa = criarMapa(document.getElementById('vis-mapa'), dados, acoes);
@@ -80,6 +84,7 @@ let selecaoAtual = {};
 // Endereço do que está aberto, pra dar pra mandar o recorte pra alguém.
 // Formato: #aba, #p=id, #uf=MG, #pec=camara-123, #ministros.
 export function enderecoDe(sel = selecaoAtual) {
+  if (sel.divisao) return `#div=${sel.divisao}`;
   if (sel.pais) return `#pais=${sel.pais}`;
   if (sel.pessoa) return `#p=${encodeURIComponent(sel.pessoa)}`;
   if (sel.uf) return `#uf=${sel.uf}`;
@@ -92,7 +97,8 @@ function selecionar(sel, mexerNoEndereco = true) {
   selecaoAtual = sel;
   mapa.selecionar(sel);
   mundoVis?.selecionar(sel);
-  if (sel.pais) painel.pais(sel.pais);
+  if (sel.divisao) painel.divisao(sel.divisao, sel.sobreDivisao, mundoVis?.divisoesDe);
+  else if (sel.pais) painel.pais(sel.pais);
   else if (sel.pessoa) painel.pessoa(sel.pessoa);
   else if (sel.uf) painel.uf(sel.uf);
   else if (sel.ministros) painel.ministros();
@@ -198,7 +204,7 @@ function abrirAba(nome) {
   // o recorte continua valendo e o endereço fica como está.
   if (enderecoDe().startsWith('#' + nome) || /^#(mundo|mapa|lista)$/.test(location.hash)) history.replaceState(null, '', `#${nome}`);
   desenharLegenda();
-  if (!selecaoAtual.pessoa && !selecaoAtual.uf && !selecaoAtual.pais && !selecaoAtual.ministros) painel.resumo(nome === 'mundo');
+  if (!selecaoAtual.pessoa && !selecaoAtual.uf && !selecaoAtual.pais && !selecaoAtual.divisao && !selecaoAtual.ministros) painel.resumo(nome === 'mundo');
 }
 for (const b of document.querySelectorAll('.abas button')) b.addEventListener('click', () => abrirAba(b.dataset.aba));
 
@@ -251,11 +257,15 @@ document.getElementById('metodologia').append(
     h('li', {}, h('b', {}, 'Classificação da Wikidata '), 'para o partido. É editada e corrigida, então acompanha partido que se move.'),
     h('li', {}, h('b', {}, 'Global Party Survey 2019 '), '(', link('Pippa Norris', 'https://doi.org/10.7910/DVN/WMGTNS'), '), survey com cientistas políticos, em domínio público. Dá um número de 0 a 10, mas é de 2019: o Partido Trabalhista britânico está lá com 2,1, do tempo do Corbyn. Por isso vem depois da Wikidata, e não antes.'),
     h('li', {}, h('b', {}, 'Correntes declaradas pelo partido '), 'na Wikidata — comunismo, social-democracia, conservadorismo e afins. Sem isso, país de partido único ficava sem cor: o Partido Comunista da China não tem classificação pronta, mas declara comunismo e marxismo-leninismo. Fica de fora, de propósito, tudo que é ortogonal ao eixo: autoritarismo, populismo, militarismo, nacionalismo étnico. Um partido pode ser autoritário em qualquer parte do espectro.'),
-    h('li', {}, h('b', {}, 'Classificação deste site '), 'para um punhado de partidos que nenhuma das três alcança. A ficha mostra o motivo e a fonte.')),
-  h('p', {}, h('b', {}, 'Governa sem partido '), 'não é falta de dado, é um fato — e por três motivos bem diferentes: monarquia onde partido é proibido, junta ou governo de transição, e presidente eleito sem filiação formal, comum na América Latina. Nos três casos não existe posição de partido pra mostrar, e por isso eles têm cor própria, fora da régua.'),
+    h('li', {}, h('b', {}, 'Classificação deste site '), 'para o que nenhuma das três alcança, inclusive quem governa sem filiação formal mas foi eleito por um partido conhecido. A ficha mostra sempre o motivo e a fonte.')),
+  h('p', {}, h('b', {}, 'Governa sem partido '), 'não é falta de dado, é um fato — e por cinco motivos bem diferentes, que a ficha do país distingue: monarquia onde partido é proibido (Arábia Saudita, Catar), junta ou governo de transição (Mali, Síria, Haiti), parlamento sem partidos (Tuvalu, Palau), governo colegiado de coalizão permanente (Suíça) e governante sem legenda num país que tem partidos (Belarus, Líbano).'),
+  h('p', {}, 'Sem filiação não quer dizer sem lado: onde dá pra dizer por qual partido a pessoa foi eleita, a cor é a desse partido. Putin não tem filiação desde 2012 mas governa com a Rússia Unida, que tem maioria constitucional na Duma; Kast renunciou ao Partido Republicano ao assumir no Chile. A ficha diz as duas coisas.'),
   h('p', {}, 'Duas ressalvas que mudam a leitura do mapa. A primeira: ninguém classifica país, classifica partido — a cor mostra a posição de quem governa hoje, não uma medida do país. A segunda: o número do mundo e o do Brasil vêm de estudos diferentes, na mesma régua de 0 a 10 e na mesma direção, mas não devem ser comparados número a número.'),
   h('p', {}, 'Quando os dois chefes são de partidos diferentes, quem conta é o chefe de governo — na Alemanha, o chanceler. Quando são do mesmo partido, o chefe de Estado: na China quem manda é Xi Jinping, não o primeiro-ministro.'),
   h('p', {}, 'No modo “tempo no poder”, monarca hereditário fica fora do ranking: herdar o trono não é a mesma coisa que não sair do poder.'),
+  h('h4', {}, 'Quem governa os estados'),
+  h('p', {}, 'Ao abrir um país, cada divisão ganha a cor do partido de quem a governa, onde isso existe. Vem da ', link('Wikidata', 'https://www.wikidata.org/'), ', ligada ao desenho do mapa pelo código ISO 3166-2 — “US-CA”, “BR-SP” —, que é o que evita casar nome de província com nome de província, do tipo de erro que passa em silêncio. São 1.205 das 4.584 divisões do mapa, e a cobertura é muito desigual: quase completa nos Estados Unidos, Alemanha, Japão, Brasil, Rússia e Índia, quase nada na África e no Oriente Médio. Onde falta, a divisão fica com a cor do próprio país.'),
+  h('p', {}, 'Só o chefe de governo da divisão entra — governador, premiê, ministro-chefe. O chefe de Estado subnacional costuma ser figura cerimonial nomeada de cima, e misturar os dois faria a cor depender de qual viesse primeiro. No Brasil o dado não vem da Wikidata: são os governadores que o próprio site coleta, com a nota de 0 a 10 do partido. E a ficha de cada divisão traz a data de posse de propósito: governante que saiu sem alguém fechar a declaração na Wikidata continua aparecendo, e uma data muito antiga é o sinal disso.'),
   h('h4', {}, 'As cinco faixas'),
   h('p', {}, 'Esquerda até 3, centro-esquerda até 4,5, centro até 5,5, centro-direita até 7, direita acima disso. Os cortes são escolha deste site: o artigo dá uma nota por partido e não divide em faixas. Foram postos onde a distribuição real tem folga — não existe partido com gente em cargo entre 5,3 e 6,3 —, e não em quintos iguais da régua. Nos posts a conta é só de dois lados, abaixo ou acima de 5.'),
   h('h4', {}, 'Porcentagem de esquerda e direita'),
@@ -309,6 +319,12 @@ function abrirEndereco() {
   if (chave === 'uf' && dados.ufPorSigla.has(valor)) return acoes.aoEscolherUf(valor);
   if (chave === 'ministros') return acoes.aoVerMinistros();
   if (chave === 'pais' && mundoVis) { abrirAba('mundo'); return acoes.aoEscolherPais(valor); }
+  // #div=US-CA: abre o país e só depois marca a divisão, porque as divisões
+  // só existem na tela depois que o arquivo do país chega.
+  if (chave === 'div' && mundoVis && /^[A-Z]{2}-/.test(valor)) {
+    abrirAba('mundo');
+    return mundoVis.abrirPais(valor.slice(0, 2)).then(() => acoes.aoEscolherDivisao(valor));
+  }
   return null;
 }
 abrirEndereco();

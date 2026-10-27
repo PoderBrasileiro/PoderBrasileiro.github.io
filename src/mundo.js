@@ -89,7 +89,7 @@ function caixaDaRegiao([o, s, l, n], projecao) {
   ];
 }
 
-export function criarMundo(raiz, dados, { aoEscolherPais, aoEscolherUf, carregarDivisoes }) {
+export function criarMundo(raiz, dados, { aoEscolherPais, aoEscolherUf, aoEscolherDivisao, carregarDivisoes, carregarSubnacional }) {
   const paises = dados.mundo?.paises ?? [];
   const porNum = new Map(paises.map((p) => [p.num, p]));
   const porIso = new Map(paises.map((p) => [p.iso, p]));
@@ -99,7 +99,10 @@ export function criarMundo(raiz, dados, { aoEscolherPais, aoEscolherUf, carregar
   let paisAberto = null;      // ISO do país cujas divisões estão na tela
   let paisPedido = null;
   let k = 1;                  // fator de zoom atual
+  let divisaoAtiva = null;    // código ISO 3166-2 da divisão escolhida
   const divisoes = new Map(); // ISO -> Promise do TopoJSON
+  let subnacional = null;     // ISO 3166-2 -> quem governa a divisão
+  let pedindoSubnacional = null;
 
   const svg = d3.create('svg').attr('viewBox', `0 0 ${L} ${A}`).attr('class', 'mapa-mundi')
     .attr('role', 'img').attr('aria-label', 'Mapa-múndi. A aba Lista traz os mesmos dados em tabela.');
@@ -124,6 +127,45 @@ export function criarMundo(raiz, dados, { aoEscolherPais, aoEscolherUf, carregar
 
   const dadoDe = (f) => porNum.get(Number(f.id));
 
+  // País espalhado estraga as duas contas que o mapa faz com a forma: onde
+  // pôr o nome e pra onde levar o zoom. A França tem a Guiana do outro lado
+  // do Atlântico, os Estados Unidos têm o Havaí no meio do Pacífico — e a
+  // caixa da forma inteira, nesses casos, é quase o planeta: o nome saía solto
+  // no oceano e o "zoom" no país ficava em escala 1, parado.
+  //
+  // Daqui saem os pedaços de uma forma, do maior pro menor, com a área.
+  function pedacos(f) {
+    const g = f.geometry;
+    if (g?.type !== 'MultiPolygon' || g.coordinates.length < 2) return null;
+    return g.coordinates
+      .map((coordinates) => { const pol = { type: 'Polygon', coordinates }; return { pol, area: caminho.area(pol) }; })
+      .sort((a, b) => b.area - a.area);
+  }
+
+  // O nome vai no centro do maior pedaço.
+  function centro(f) {
+    const ps = pedacos(f);
+    return caminho.centroid(ps ? ps[0].pol : f);
+  }
+
+  // A caixa cobre o maior pedaço e os que chegam a um quinto dele. O corte é
+  // escolha, e está onde separa o que as pessoas esperam ver junto do que não:
+  // o Alasca (21% dos Estados Unidos continentais) entra, a Guiana Francesa
+  // (15% da França) e Svalbard (19% da Noruega) ficam de fora.
+  const FRACAO = 0.2;
+  function caixaPrincipal(f) {
+    const ps = pedacos(f);
+    if (!ps) return caminho.bounds(f);
+    let [[x0, y0], [x1, y1]] = caminho.bounds(ps[0].pol);
+    for (const { pol, area } of ps.slice(1)) {
+      if (area < ps[0].area * FRACAO) break;
+      const [[a0, b0], [a1, b1]] = caminho.bounds(pol);
+      x0 = Math.min(x0, a0); y0 = Math.min(y0, b0);
+      x1 = Math.max(x1, a1); y1 = Math.max(y1, b1);
+    }
+    return [[x0, y0], [x1, y1]];
+  }
+
   // Nome no mapa só onde ele cabe de verdade. Duas contas, as duas em pixels
   // de tela: a área do país tem que dar pra ler, e o nome tem que caber na
   // largura da forma. Só a área não bastava — "Papua-Nova Guiné" vazava pro
@@ -132,10 +174,15 @@ export function criarMundo(raiz, dados, { aoEscolherPais, aoEscolherUf, carregar
   function cabe(f, texto, fonte, areaMin) {
     const a = f.__area ?? 0;
     if (a * k * k < areaMin) return false;
-    const [[x0], [x1]] = caminho.bounds(f);
+    // A largura é a do corpo principal, não a do conjunto: senão a França
+    // mede do Caribe ao Pacífico e cabe qualquer nome.
+    const [[x0], [x1]] = f.__caixa ?? caminho.bounds(f);
     return texto.length * LARGURA_LETRA * (fonte / 11) <= (x1 - x0) * k * 1.15;
   }
-  for (const f of visiveis.features) f.__area = caminho.area(f);
+  for (const f of visiveis.features) {
+    f.__area = caminho.area(f);
+    f.__caixa = caixaPrincipal(f);
+  }
 
   const formas = gPaises.selectAll('path').data(visiveis.features).join('path')
     .attr('class', 'pais')
@@ -146,7 +193,7 @@ export function criarMundo(raiz, dados, { aoEscolherPais, aoEscolherUf, carregar
     .on('dblclick', (ev, f) => { ev.stopPropagation(); const d = dadoDe(f); if (d) abrirPais(d.iso); });
 
   const rotulos = gRotulos.selectAll('text').data(visiveis.features.filter(dadoDe)).join('text')
-    .attr('transform', (f) => `translate(${caminho.centroid(f)})`)
+    .attr('transform', (f) => `translate(${centro(f)})`)
     .attr('dy', '0.35em')
     .text((f) => dadoDe(f).nome);
 
@@ -158,8 +205,7 @@ export function criarMundo(raiz, dados, { aoEscolherPais, aoEscolherUf, carregar
     mostrarDica(ev, [d.nome, c?.nome ?? 'sem dado',
       modo === 'tempo'
         ? (anos == null ? 'tempo no cargo não informado' : `há ${fmtNum(anos, 0)} ano${anos >= 2 ? 's' : ''} no cargo`)
-        : d.semPartido ? 'governa sem partido'
-          : c?.posicaoRotulo ?? 'sem posição conhecida']);
+        : c?.posicaoRotulo ?? (d.semPartido ? 'governa sem partido' : 'sem posição conhecida')]);
   }
 
   // ---------- zoom e arrasto ----------
@@ -189,7 +235,14 @@ export function criarMundo(raiz, dados, { aoEscolherPais, aoEscolherUf, carregar
   }
 
   const RAPIDO = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const irPara = (t, ms = 750) => svg.transition().duration(RAPIDO ? 0 : ms).ease(d3.easeCubicInOut).call(zoom.transform, t);
+
+  // No quadro seguinte, de propósito. Link direto pra um país (#pais=DE) abre
+  // o mapa ainda durante a avaliação do módulo, e uma transição do d3 criada
+  // ali não chega a rodar: o mapa ficava em escala 1, como se o zoom não
+  // existisse, mas só quando se entrava pelo endereço. Um quadro de atraso não
+  // se vê no clique e faz o link direto funcionar igual.
+  const irPara = (t, ms = 750) => requestAnimationFrame(() =>
+    svg.transition().duration(RAPIDO ? 0 : ms).ease(d3.easeCubicInOut).call(zoom.transform, t));
 
   // ---------- divisões internas ----------
 
@@ -198,18 +251,46 @@ export function criarMundo(raiz, dados, { aoEscolherPais, aoEscolherUf, carregar
     return divisoes.get(iso);
   };
 
-  // No Brasil as divisões são os estados de verdade, com a cor do partido do
-  // governador: esse dado o site já tem. Nos outros países a fonte dá o desenho
-  // e o nome, e quem governa cada divisão ainda não existe aqui — então elas
-  // ficam com a cor do próprio país, só pra dar contorno e nome.
+  // Quem governa cada divisão vem de duas bases, nesta ordem:
+  //
+  //   Brasil — do próprio site, que tem os governadores do TSE e a nota de 0
+  //     a 10 de cada partido. É mais fresco e mais preciso que o resto.
+  //   Qualquer outro país — de subnacional.json, que é a Wikidata casada pelo
+  //     código ISO 3166-2. Cobre 1.205 das 4.584 divisões, muito bem nos
+  //     países grandes e quase nada na África.
+  //
+  // Onde nenhuma das duas sabe, a divisão fica com a cor do próprio país —
+  // mais honesto que hachurar tudo: quem governa o país governa ali também.
   const ufDaDivisao = (f) => ((f.properties.iso ?? '').startsWith('BR-') ? f.properties.iso.slice(3) : null);
+  const subDaDivisao = (f) => subnacional?.[(f.properties.iso ?? '').toUpperCase()] ?? null;
+
+  function quemGoverna(f, iso) {
+    const uf = iso === 'BR' ? ufDaDivisao(f) : null;
+    const g = uf && dados.governadorPorUf.get(uf);
+    if (g) {
+      const pos = dados.partidos[g.partido]?.posicao;
+      return { pessoa: g.nome, partido: g.partido, posicao: pos ?? null, uf, desde: g.desde ?? null };
+    }
+    return subDaDivisao(f);
+  }
 
   function corDaDivisao(f, iso) {
-    const uf = iso === 'BR' ? ufDaDivisao(f) : null;
-    if (!uf) return corDoPais(porIso.get(iso));
-    const g = dados.governadorPorUf.get(uf);
-    const pos = g ? dados.partidos[g.partido]?.posicao : null;
-    return pos == null ? 'url(#hachura-mundo)' : escala(pos);
+    const q = quemGoverna(f, iso);
+    if (!q) return corDoPais(porIso.get(iso));
+    if (q.posicao != null) return escala(q.posicao);
+    if (q.faixa) return corDaFaixa(q.faixa, escala);
+    if (q.semPartido) return 'var(--sem-partido)';
+    return 'url(#hachura-mundo)';
+  }
+
+  // Os dados de quem governa as divisões são 330 kB e só servem depois que
+  // alguém entra num país: chegam na primeira vez que isso acontece.
+  function pedirSubnacional() {
+    if (subnacional) return Promise.resolve(subnacional);
+    pedindoSubnacional ??= carregarSubnacional()
+      .then((d) => { subnacional = d.divisoes ?? {}; return subnacional; })
+      .catch(() => { subnacional = {}; return subnacional; });
+    return pedindoSubnacional;
   }
 
   async function abrirPais(iso) {
@@ -217,35 +298,37 @@ export function criarMundo(raiz, dados, { aoEscolherPais, aoEscolherUf, carregar
     if (!f) return;
     paisPedido = iso;
     aoEscolherPais(iso);
-    irPara(transformarPara(caminho.bounds(f)));
+    irPara(transformarPara(f.__caixa));
 
     let topo = null;
-    try { topo = await pedirDivisoes(iso); } catch { divisoes.delete(iso); }
+    try { [topo] = await Promise.all([pedirDivisoes(iso), pedirSubnacional()]); } catch { divisoes.delete(iso); }
     if (paisPedido !== iso) return;
     paisAberto = iso;
     voltar.hidden = false;
     formas.classed('apagada', (x) => x !== f);
 
     const feicoes = topo ? feature(topo, topo.objects.divisoes).features : [];
-    for (const d of feicoes) d.__area = caminho.area(d);
+    for (const d of feicoes) { d.__area = caminho.area(d); d.__caixa = caixaPrincipal(d); }
     semDivisoes.hidden = feicoes.length > 0;
     gDivisoes.selectAll('path').data(feicoes, (d) => d.properties.id).join('path')
       .attr('class', 'divisao')
       .attr('d', caminho)
       .attr('fill', (d) => corDaDivisao(d, iso))
       .on('pointermove', (ev, d) => {
-        const uf = iso === 'BR' && ufDaDivisao(d);
-        const g = uf && dados.governadorPorUf.get(uf);
-        mostrarDica(ev, [d.properties.nome, g ? `${g.nome} · ${g.partido ?? 'sem partido'}` : d.properties.tipo ?? '']);
+        const q = quemGoverna(d, iso);
+        mostrarDica(ev, [d.properties.nome,
+          q ? q.pessoa : d.properties.tipo ?? '',
+          q ? (q.partido ?? 'sem partido') : 'quem governa aqui não está nos dados']);
       })
       .on('pointerleave', esconderDica)
       .on('click', (ev, d) => {
         ev.stopPropagation();
-        const uf = iso === 'BR' && ufDaDivisao(d);
-        if (uf) aoEscolherUf(uf);
+        const uf = iso === 'BR' ? ufDaDivisao(d) : null;
+        if (uf) return aoEscolherUf(uf);
+        aoEscolherDivisao(d.properties.iso, { nome: d.properties.nome, tipo: d.properties.tipo, pais: iso });
       });
     gRotulosDiv.selectAll('text').data(feicoes, (d) => d.properties.id).join('text')
-      .attr('transform', (d) => `translate(${caminho.centroid(d)})`)
+      .attr('transform', (d) => `translate(${centro(d)})`)
       .attr('dy', '0.35em')
       .text((d) => d.properties.nome);
     aplicar(d3.zoomTransform(svg.node()));
@@ -309,8 +392,11 @@ export function criarMundo(raiz, dados, { aoEscolherPais, aoEscolherUf, carregar
       const escuro = getComputedStyle(document.documentElement).colorScheme.includes('dark');
       return corDoTempo(anosNoCargo(d.estado?.desde ?? d.governo?.desde), escuro) ?? 'url(#hachura-mundo)';
     }
-    if (d.semPartido) return 'var(--sem-partido)';
-    return corDaFaixa(faixaDoPais(d), escala) ?? 'url(#hachura-mundo)';
+    // A faixa vem primeiro, mesmo em país "sem partido": quando se sabe por
+    // qual partido a pessoa foi eleita — Putin pela Rússia Unida, Kast pelo
+    // Partido Republicano — a cor é essa, e o painel conta a história toda.
+    return corDaFaixa(faixaDoPais(d), escala)
+      ?? (d.semPartido ? 'var(--sem-partido)' : 'url(#hachura-mundo)');
   }
 
   function pintar() {
@@ -324,11 +410,16 @@ export function criarMundo(raiz, dados, { aoEscolherPais, aoEscolherUf, carregar
     get modo() { return modo; },
     pintar,
     abrirPais,
-    selecionar({ pais }) {
+    selecionar({ pais, divisao }) {
+      divisaoAtiva = divisao ?? null;
+      gDivisoes.selectAll('path').classed('ativa', (d) => d.properties.iso === divisaoAtiva);
       formas.classed('ativa', (f) => dadoDe(f)?.iso === pais);
       formas.filter((f) => dadoDe(f)?.iso === pais).raise();
-      if (paisAberto && paisAberto !== pais) fecharPais();
+      // Escolher outro país fecha o que estava aberto; escolher uma divisão
+      // DENTRO dele, não — senão clicar num estado saltava de volta pro mundo.
+      if (paisAberto && !divisao && paisAberto !== pais) fecharPais();
     },
+    get divisoesDe() { return subnacional; },
   };
 }
 

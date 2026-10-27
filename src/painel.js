@@ -272,7 +272,10 @@ export function criarPainel(raiz, dados, { aoEscolherPessoa, aoEscolherUf, aoVer
     const conta = (f) => paises.filter((p) => faixaDoPais(p) === f).length;
     const esquerda = conta('esquerda') + conta('centro-esquerda');
     const direita = conta('direita') + conta('centro-direita');
-    const semPartido = paises.filter((p) => p.semPartido).length;
+    // Quem governa sem partido mas foi eleito por um conhecido já entrou nas
+    // contas de cima, pela faixa: aqui fica só quem não tem nem uma coisa nem
+    // outra, senão a soma passa de 195.
+    const semPartido = paises.filter((p) => p.semPartido && !faixaDoPais(p)).length;
     const semFaixa = paises.filter((p) => !p.semPartido && !faixaDoPais(p)).length;
 
     const velhos = paises
@@ -353,8 +356,40 @@ export function criarPainel(raiz, dados, { aoEscolherPessoa, aoEscolherUf, aoVer
         lista.map((p) => cartao(p, dados, aoEscolherPessoa)));
     },
 
-  // Ficha de um país: quem governa, há quanto tempo, e o que se sabe do
-  // partido. Tudo com link pra Wikidata, que é de onde vem e onde se corrige.
+    // Ficha de um estado, província ou departamento. O Brasil não passa por
+    // aqui: lá o clique abre a ficha da UF, que tem muito mais coisa.
+    divisao(codigo, sobre, mapaDasDivisoes) {
+      const d = mapaDasDivisoes?.[codigo] ?? null;
+      const pais = (dados.mundo?.paises ?? []).find((p) => p.iso === (sobre?.pais ?? codigo.slice(0, 2)));
+      const nome = d?.nome ?? sobre?.nome ?? codigo;
+      const anos = (desde) => {
+        const a = anosNoCargo(desde);
+        return a == null ? null : `há ${fmtNum(a, a < 10 ? 1 : 0)} ano${a >= 2 ? 's' : ''}`;
+      };
+      trocar(raiz,
+        compartilhar(),
+        h('p', { class: 'sobretitulo' }, [sobre?.tipo, pais?.nome].filter(Boolean).join(' · ') || 'Divisão'),
+        h('h2', {}, nome),
+        h('p', { class: 'fraco' }, `Código ISO ${codigo}`),
+        d
+          ? h('section', {}, h('h3', {}, 'Chefe de governo'),
+            h('p', {}, h('b', {}, d.pessoa)),
+            h('p', { class: 'fraco' }, [d.partido ?? 'sem partido', anos(d.desde) && `no cargo ${anos(d.desde)}`].filter(Boolean).join(' · ')),
+            d.faixa ? h('p', {}, h('span', { class: 'selo', 'data-faixa': d.faixa }, d.posicaoRotulo ?? d.faixa)) : null,
+            h('p', { class: 'fraco' }, d.faixa
+              ? 'Faixa do partido, pela Wikidata. Vale pro partido, não pra pessoa.'
+              : d.semPartido ? 'Eleito sem filiação partidária.' : 'O partido existe, mas ninguém o classificou no espectro.'),
+            h('ul', { class: 'buscas' }, h('li', {}, h('a', { href: d.wikidata, target: '_blank', rel: 'noopener noreferrer' }, 'Conferir na Wikidata ↗'))))
+          : h('section', {}, h('h3', {}, 'Quem governa aqui'),
+            h('p', { class: 'fraco' }, 'Não está nos dados. A Wikidata cobre bem os estados dos países grandes e quase nada da África e do Oriente Médio — por isso esta divisão aparece com a cor do país, não com a dela.')),
+        pais ? h('section', {}, h('h3', {}, 'No país'),
+          h('p', {}, h('button', { class: 'botao vazio', onclick: () => aoEscolherPais(pais.iso) }, `Ver ${pais.nome}`))) : null,
+        d?.desde ? h('p', { class: 'fraco' }, 'A data de posse está aqui de propósito: governante que saiu sem alguém fechar a declaração na Wikidata continua aparecendo, e uma data muito antiga é o sinal disso.') : null);
+      raiz.scrollTop = 0;
+    },
+
+    // Ficha de um país: quem governa, há quanto tempo, e o que se sabe do
+    // partido. Tudo com link pra Wikidata, que é de onde vem e onde se corrige.
     pais(iso) {
     const d = (dados.mundo?.paises ?? []).find((p) => p.iso === iso);
     if (!d) return this.resumo();
@@ -370,7 +405,7 @@ export function criarPainel(raiz, dados, { aoEscolherPessoa, aoEscolherUf, aoVer
       alinhamento: 'Classificação da própria Wikidata para o partido.',
       survey: 'Posição do partido no Global Party Survey de 2019, survey com cientistas políticos.',
       ideologia: 'Deduzida das correntes que o partido declara na Wikidata — comunismo, social-democracia, conservadorismo e afins. É leitura deste site, não classificação de ninguém.',
-      manual: 'Classificação deste site, porque a Wikidata não traz nenhuma para este partido.',
+      manual: 'Classificação deste site — a Wikidata não traz nenhuma, ou quem governa não tem partido:',
     };
 
     const bloco = (titulo, c) => {
@@ -392,7 +427,7 @@ export function criarPainel(raiz, dados, { aoEscolherPessoa, aoEscolherUf, aoVer
             c.partidoNoSurvey && c.partidoNoSurvey !== c.partido
               ? h('p', { class: 'fraco' }, `No survey o partido aparece como “${c.partidoNoSurvey}”.`) : null)
           : c.semPartido
-            ? h('p', { class: 'fraco' }, 'Governa sem filiação partidária. Pode ser monarquia onde partido é proibido, governo de transição, ou presidente eleito por um movimento sem legenda — nos três casos não existe posição de partido para mostrar.')
+            ? h('p', { class: 'fraco' }, d.motivoSemPartido?.motivo ?? 'Governa sem filiação partidária, e não se sabe por qual partido foi eleito — então não há posição de partido para mostrar.')
             : h('p', { class: 'fraco' }, 'O partido existe, mas ninguém o classificou no espectro: nem a Wikidata, nem o survey.'),
         h('ul', { class: 'buscas' }, h('li', {}, h('a', { href: c.wikidata, target: '_blank', rel: 'noopener noreferrer' }, 'Conferir na Wikidata ↗'))));
     };
@@ -404,6 +439,9 @@ export function criarPainel(raiz, dados, { aoEscolherPessoa, aoEscolherUf, aoVer
       h('p', {},
         h('button', { class: 'botao', onclick: () => aoAbrirPais(d.iso) }, 'Ver as divisões internas'),
         d.iso === 'BR' ? [' ', h('button', { class: 'botao vazio', onclick: aoVerBrasil }, 'O Brasil por dentro')] : null),
+      d.semPartido && d.motivoSemPartido
+        ? h('p', { class: 'aviso' }, h('b', {}, 'Governa sem partido. '), d.motivoSemPartido.motivo)
+        : null,
       d.acumula
         ? bloco('Chefe de Estado e de governo', d.estado)
         : [bloco('Chefe de Estado', d.estado), bloco('Chefe de governo', d.governo)],

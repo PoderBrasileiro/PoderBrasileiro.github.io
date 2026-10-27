@@ -26,6 +26,7 @@ npm run dev        # abre em http://localhost:5173
 
 ```bash
 npm run mundo      # quem governa os 195 países -> mundo.json e mundo-malha.json
+npm run subnacional # quem governa cada estado/província -> subnacional.json
 npm run coletar    # cargos, mapa e votações  -> public/data/brasil.json, malha.json
 npm run eleicao    # transição 2027: resultado de 2026 x quem está no cargo -> eleicao2026.json
 npm run pecs       # PECs: estágio e voto nominal de cada parlamentar -> pecs.json
@@ -61,6 +62,7 @@ de uma tabela da Wikipédia, e se o formato dela mudar o parser quebra.
 | Faixa do partido no mundo | Wikidata (classificação e correntes declaradas), Global Party Survey 2019 e `data/mundo-manual.json` |
 | Mapa-múndi | Natural Earth, via world-atlas |
 | Divisões internas dos países | Natural Earth 1:10m admin-1 (domínio público) |
+| Quem governa cada estado/província | Wikidata, ligada ao mapa pelo código ISO 3166-2 |
 | Mapa e UFs | IBGE |
 | Presidente e vice | `data/manual.json` |
 | Posição dos partidos | `data/partidos.json` |

@@ -16,76 +16,10 @@
 // cada país carrega o link do seu item, pra qualquer um conferir e corrigir.
 
 import { writeFile, readFile } from 'node:fs/promises';
+import { BANDAS, consultar, qid, buscarPartidos, faixaDoPartido, faixaDaNota } from './espectro.mjs';
 
 const RAIZ = new URL('..', import.meta.url);
 const UA = { 'User-Agent': 'GPL/0.1 (projeto pessoal; dados publicos)', Accept: 'application/sparql-results+json' };
-
-// As cinco faixas, por índice: 0 esquerda ... 4 direita. É a mesma divisão
-// que o site usa no Brasil, e os rótulos saem daqui pro painel.
-const BANDAS = [
-  { chave: 'esquerda', rotulo: 'Esquerda' },
-  { chave: 'centro-esquerda', rotulo: 'Centro-esquerda' },
-  { chave: 'centro', rotulo: 'Centro' },
-  { chave: 'centro-direita', rotulo: 'Centro-direita' },
-  { chave: 'direita', rotulo: 'Direita' },
-];
-
-// Identificadores, não rótulos: o texto da Wikidata muda de tradução, o Q não.
-//
-// P1387, "political alignment": é a própria Wikidata dizendo em que parte do
-// espectro o partido está. Quando existe, é o que vale.
-const ALINHAMENTO = {
-  Q1129409: [0, 'Extrema-esquerda'],
-  Q164597: [0, 'Esquerda'],
-  Q737014: [1, 'Centro-esquerda'],
-  Q6587194: [2, 'Centro'],
-  Q844072: [3, 'Centro-direita'],
-  Q76074: [4, 'Direita'],
-  Q250598: [4, 'Direita libertária'],
-  Q23018230: [4, 'Direita alternativa'],
-  Q204481: [4, 'Extrema direita'],
-  // "Partido pega-tudo" (Q1030814) descreve estratégia, não posição: fica fora.
-};
-
-// P1142, "political ideology": o desempate quando não há alinhamento. É o que
-// faltava pra pintar os países de partido único — o Partido Comunista da China
-// não tem P1387, mas tem comunismo e marxismo-leninismo em P1142.
-//
-// Fica de fora, de propósito, tudo que é ortogonal ao eixo esquerda-direita:
-// autoritarismo, totalitarismo, populismo, estatismo, militarismo,
-// nacionalismo étnico, federalismo, euroscepticismo. Um partido pode ser
-// autoritário em qualquer parte do espectro, e tratar isso como "direita"
-// seria trocar uma medida por outra sem avisar.
-const IDEOLOGIA = {
-  // esquerda
-  Q6186: 0, Q7264: 0, Q211930: 0, Q7272: 0, Q389647: 0, Q189280: 0,
-  Q11900614: 0, Q1202972: 0, Q8813: 0, Q590478: 0, Q979616: 0, Q375332: 0,
-  Q14475917: 0, Q28319806: 0, Q904148: 0, Q6034: 0, Q1191637: 0,
-  // centro-esquerda
-  Q121254: 1, Q821102: 1, Q201712: 1, Q494792: 1, Q1080800: 1,
-  // centro
-  Q6216: 2, Q192125: 2, Q324530: 2,
-  // centro-direita
-  Q209158: 3, Q729119: 3, Q1043096: 3, Q617609: 3, Q162719: 3, Q660018: 3,
-  Q794394: 3, Q7333466: 3, Q7169: 3,
-  // direita
-  Q1414298: 4, Q852739: 4, Q436860: 4, Q182121: 4, Q853562: 4, Q2019152: 4,
-  Q281347: 4, Q1307223: 4, Q189746: 4, Q1140370: 4, Q3757343: 4, Q2366025: 4,
-  Q1422634: 4, Q50685643: 4, Q6235: 4,
-};
-
-// Os cortes das cinco faixas, os mesmos de src/comum.js: esquerda até 3,
-// centro-esquerda até 4,5, centro até 5,5, centro-direita até 7.
-const CORTES = [3, 4.5, 5.5, 7, Infinity];
-
-// Vários valores viram um: a média das bandas conhecidas, arredondada. Um
-// partido com "social-democracia" e "progressismo" cai em centro-esquerda;
-// um com "comunismo" e "marxismo-leninismo", em esquerda.
-function bandaMedia(valores, mapa) {
-  const notas = valores.map((q) => (Array.isArray(mapa[q]) ? mapa[q][0] : mapa[q])).filter((n) => n != null);
-  if (!notas.length) return null;
-  return Math.round(notas.reduce((a, b) => a + b, 0) / notas.length);
-}
 
 // ---------- posição no espectro, pelo Global Party Survey ----------
 
@@ -134,22 +68,6 @@ function acharNoSurvey(cand, nomes, siglas) {
     ?? cand.find((p) => alvos.some((a) => a.length > 6 && (chave(p.nome).includes(a) || a.includes(chave(p.nome)))))
     ?? null;
 }
-
-async function consultar(query) {
-  for (let i = 0; ; i++) {
-    try {
-      const r = await fetch('https://query.wikidata.org/sparql?' + new URLSearchParams({ query, format: 'json' }),
-        { headers: UA, signal: AbortSignal.timeout(180000) });
-      if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      return (await r.json()).results.bindings;
-    } catch (e) {
-      if (i >= 2) throw new Error(`Wikidata: ${e.message}`);
-      await new Promise((ok) => setTimeout(ok, 5000 * (i + 1)));
-    }
-  }
-}
-
-const qid = (uri) => uri.split('/').pop();
 
 // Um país por linha de cargo. O partido pode vir repetido quando a pessoa
 // também pertence a uma legenda supranacional (o Partido Popular Europeu, por
@@ -208,32 +126,9 @@ for (const l of linhas) {
   paises.set(iso, p);
 }
 
-// Tudo que é do partido — nome em inglês, sigla, alinhamento e ideologia —
-// numa consulta própria, por lotes de QID. Juntar isso à consulta principal
-// multiplicava as linhas e a resposta vinha truncada.
 console.log('Partidos: nome em inglês, alinhamento e ideologia...');
 const qids = [...new Set([...paises.values()].flatMap((p) => [...(p.estado?._opcoes ?? []), ...(p.governo?._opcoes ?? [])]).map((o) => o.qid))];
-const partidos = new Map();
-const doPartido = (k) => {
-  if (!partidos.has(k)) partidos.set(k, { nomes: new Set(), siglas: new Set(), alinhamento: new Set(), ideologia: new Set() });
-  return partidos.get(k);
-};
-for (let i = 0; i < qids.length; i += 60) {
-  const valores = qids.slice(i, i + 60).map((q) => `wd:${q}`).join(' ');
-  const r = await consultar(`SELECT ?partido ?en ?sigla ?alinhamento ?ideologia WHERE {
-    VALUES ?partido { ${valores} }
-    OPTIONAL { ?partido rdfs:label ?en . FILTER(LANG(?en) = "en") }
-    OPTIONAL { ?partido wdt:P1813 ?sigla }
-    OPTIONAL { ?partido wdt:P1387 ?alinhamento }
-    OPTIONAL { ?partido wdt:P1142 ?ideologia } }`).catch(() => []);
-  for (const l of r) {
-    const a = doPartido(qid(l.partido.value));
-    if (l.en) a.nomes.add(l.en.value);
-    if (l.sigla) a.siglas.add(l.sigla.value);
-    if (l.alinhamento) a.alinhamento.add(qid(l.alinhamento.value));
-    if (l.ideologia) a.ideologia.add(qid(l.ideologia.value));
-  }
-}
+const partidos = await buscarPartidos(qids);
 
 console.log('Global Party Survey...');
 let survey = new Map();
@@ -253,7 +148,7 @@ for (const p of paises.values()) {
     delete c._opcoes;
     c.partido = melhor?.nome ?? null;
     if (!c.partido) continue;
-    const a = partidos.get(melhor.qid) ?? doPartido('vazio');
+    const a = partidos.get(melhor.qid);
 
     // Ordem das fontes da faixa, da mais confiável pra menos:
     //
@@ -266,69 +161,32 @@ for (const p of paises.values()) {
     //   3. ideologia (P1142) — dedução a partir das correntes declaradas.
     //   4. arquivo manual — o resto, com motivo escrito.
     //
-    // O painel diz qual delas foi usada em cada país.
-    const alvos = [...a.alinhamento];
-    const porAlinhamento = bandaMedia(alvos, ALINHAMENTO);
-    if (porAlinhamento != null) {
-      c.faixa = BANDAS[porAlinhamento].chave;
-      // Com um valor só, vale o rótulo específico ("Extrema-esquerda"); com
-      // vários, a média já não é nenhum deles, e fica o nome da faixa.
-      const unico = alvos.filter((q) => ALINHAMENTO[q]);
-      c.posicaoRotulo = unico.length === 1 ? ALINHAMENTO[unico[0]][1] : BANDAS[porAlinhamento].rotulo;
-      c.faixaFonte = 'alinhamento';
-    }
-    const porIdeologia = bandaMedia([...a.ideologia], IDEOLOGIA);
+    // O painel diz qual delas foi usada em cada país. As duas primeiras valem
+    // também pros governos estaduais, e por isso moram em espectro.mjs.
+    const pelaWikidata = faixaDoPartido(a);
+    if (pelaWikidata?.faixaFonte === 'alinhamento') Object.assign(c, pelaWikidata);
 
-    const achado = acharNoSurvey(survey.get(p.iso3) ?? [], [...a.nomes, c.partido], [...a.siglas]);
+    const achado = acharNoSurvey(survey.get(p.iso3) ?? [], [...(a?.nomes ?? []), c.partido], [...(a?.siglas ?? [])]);
     if (achado) {
       c.posicao = achado.posicao;
       c.social = achado.social;
       c.partidoNoSurvey = achado.nome;
-      if (!c.faixa) {
-        const b = CORTES.findIndex((corte) => achado.posicao < corte);
-        c.faixa = BANDAS[b].chave;
-        c.posicaoRotulo = BANDAS[b].rotulo;
-        c.faixaFonte = 'survey';
-      }
+      if (!c.faixa) Object.assign(c, faixaDaNota(achado.posicao));
     }
-    if (!c.faixa && porIdeologia != null) {
-      c.faixa = BANDAS[porIdeologia].chave;
-      c.posicaoRotulo = BANDAS[porIdeologia].rotulo;
-      c.faixaFonte = 'ideologia';
-    }
+    if (!c.faixa && pelaWikidata) Object.assign(c, pelaWikidata);
   }
   delete p.iso3;
 }
 
 // ---------- o que a Wikidata não resolve ----------
 
-// Um punhado de partidos no poder não tem nem alinhamento nem ideologia lá, e
-// alguns deles governam país grande. data/mundo-manual.json preenche esses à
-// mão, com motivo e fonte; o site mostra como classificação própria, separada.
-const manual = JSON.parse(await readFile(new URL('data/mundo-manual.json', RAIZ), 'utf8'));
-let doManual = 0;
-for (const p of paises.values()) {
-  const m = manual[p.iso];
-  if (!m?.faixa) continue;
-  for (const c of [p.estado, p.governo]) {
-    if (!c?.partido || c.faixa) continue;
-    c.faixa = m.faixa;
-    c.posicaoRotulo = BANDAS.find((b) => b.chave === m.faixa)?.rotulo ?? m.faixa;
-    c.faixaFonte = 'manual';
-    c.motivo = m.motivo;
-    c.motivoFonte = m.fonte;
-    doManual++;
-  }
-}
-
 // "Governante sem partido" não é falta de dado: é um fato, e dos mais
-// informativos. São 37 países, e por três motivos bem diferentes — monarquia
-// absoluta onde partido é proibido (Arábia Saudita, Catar), junta ou governo
-// de transição (Mali, Haiti), e presidente eleito sem filiação formal por um
-// movimento ou coligação, comum na América Latina (Chile, Colômbia, Bolívia).
-// Nos três casos não existe posição de partido pra mostrar, e deixar isso
-// hachurado junto com "a Wikidata não preencheu" misturava duas coisas
-// diferentes. Ganha categoria própria, com cor própria no mapa.
+// informativos. São 37 países, e por motivos bem diferentes — monarquia onde
+// partido é proibido, junta ou governo de transição, parlamento sem partidos,
+// governo colegiado de coalizão permanente, e presidente eleito sem filiação
+// formal, comum na América Latina. Deixar tudo isso hachurado junto com "a
+// Wikidata não preencheu" misturava duas coisas diferentes, então ganha
+// categoria própria com cor própria no mapa.
 const SEM_PARTIDO = /^(sem partido|independente|no party|nonpartisan)$/i;
 for (const p of paises.values()) {
   for (const c of [p.estado, p.governo]) {
@@ -336,6 +194,42 @@ for (const p of paises.values()) {
     if (!c.partido || SEM_PARTIDO.test(c.partido)) { c.partido = null; c.semPartido = true; }
   }
   p.semPartido = Boolean((p.governo ?? p.estado) && !p.governo?.partido && !p.estado?.partido);
+}
+
+// O arquivo manual faz duas coisas, e as duas precisam de motivo escrito.
+//
+//   faixa — a posição de um partido que a Wikidata não classifica, OU a de
+//     quem governa sem filiação formal mas foi eleito por um partido ou
+//     movimento conhecido. Putin não tem filiação desde 2012 e a Rússia ficava
+//     sem cor, embora governe com a Rússia Unida; Kast renunciou ao Partido
+//     Republicano ao assumir, e o Chile idem. "Sem filiação" não quer dizer
+//     "sem lado", e o painel diz que a classificação é deste site.
+//   semPartido — POR QUE não há partido. Monarquia absoluta, junta, parlamento
+//     apartidário e presidente sem legenda são quatro histórias diferentes
+//     pintadas da mesma cor, e sem isso a cor não dizia qual.
+const manual = JSON.parse(await readFile(new URL('data/mundo-manual.json', RAIZ), 'utf8'));
+const simples = (x) => x.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+const mesmoPartido = (a, b) => { const [x, y] = [simples(a), simples(b)]; return x === y || x.includes(y) || y.includes(x); };
+let doManual = 0, comMotivo = 0;
+for (const p of paises.values()) {
+  const m = manual[p.iso];
+  if (!m) continue;
+  if (m.semPartido && p.semPartido) { p.motivoSemPartido = m.semPartido; comMotivo++; }
+  if (!m.faixa) continue;
+  for (const c of [p.estado, p.governo]) {
+    if (!c || c.faixa) continue;
+    // Com partido: só vale pro partido que o arquivo nomeia, pra uma troca de
+    // governo não herdar em silêncio a classificação do governo anterior. A
+    // comparação é frouxa porque a Wikidata devolve ora o nome em português,
+    // ora o em inglês, e o arquivo foi escrito com um dos dois.
+    if (c.partido && m.partido && !mesmoPartido(c.partido, m.partido)) continue;
+    c.faixa = m.faixa;
+    c.posicaoRotulo = BANDAS.find((b) => b.chave === m.faixa)?.rotulo ?? m.faixa;
+    c.faixaFonte = 'manual';
+    c.motivo = m.motivo;
+    c.motivoFonte = m.fonte;
+    doManual++;
+  }
 }
 
 const lista = [...paises.values()].sort((a, b) => a.nome.localeCompare(b.nome, 'pt'));
@@ -364,10 +258,14 @@ await writeFile(new URL('public/data/mundo.json', RAIZ), JSON.stringify({
 
 const comFaixa = lista.filter((p) => p.governo?.faixa || p.estado?.faixa).length;
 const semPartidos = lista.filter((p) => p.semPartido).length;
+// Só avisa de quem ficou sem NADA: quem tem faixa já está explicado pelo
+// partido que elegeu a pessoa, e não precisa do motivo escrito.
+const semMotivo = lista.filter((p) => p.semPartido && !p.motivoSemPartido && !p.governo?.faixa && !p.estado?.faixa);
 const comPartido = lista.filter((p) => p.governo?.partido || p.estado?.partido).length;
 const comPosicao = lista.filter((p) => p.governo?.posicao != null || p.estado?.posicao != null).length;
 console.log(`
-OK: ${lista.length} países; ${comPartido} com partido, ${comPosicao} com nota do survey (0 a 10), ${comFaixa} com faixa (${doManual} do arquivo manual), ${semPartidos} sem partidos.`);
+OK: ${lista.length} países; ${comPartido} com partido, ${comPosicao} com nota do survey (0 a 10), ${comFaixa} com faixa (${doManual} do arquivo manual), ${semPartidos} governados por quem não tem partido (${comMotivo} com o motivo escrito).`);
+if (semMotivo.length) console.log(`Sem motivo escrito em data/mundo-manual.json: ${semMotivo.map((p) => p.iso).join(' ')}`);
 const cont = {};
-for (const p of lista) { const f = (p.governo?.faixa ?? p.estado?.faixa) ?? '(sem)'; cont[f] = (cont[f] ?? 0) + 1; }
+for (const p of lista) { const f = p.governo?.faixa ?? p.estado?.faixa ?? (p.semPartido ? '(sem partido)' : '(sem faixa)'); cont[f] = (cont[f] ?? 0) + 1; }
 console.log(Object.entries(cont).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k}: ${v}`).join(' · '));

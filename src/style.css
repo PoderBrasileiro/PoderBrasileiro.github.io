@@ -511,6 +511,15 @@ span.votante { color: var(--texto-2); border-style: dashed; }
   vector-effect: non-scaling-stroke;
 }
 .divisao:hover { opacity: 0.75; }
+.divisao.ativa { stroke: var(--destaque); stroke-width: 2.5; }
+
+/* Etiqueta de faixa na ficha: a bolinha de cor antes do nome, pra ligar o que
+   se lê ao que se vê no mapa. */
+.selo[data-faixa]::before { content: ""; width: 9px; height: 9px; border-radius: 50%; background: var(--meio); }
+.selo[data-faixa="esquerda"]::before { background: var(--esq); }
+.selo[data-faixa="centro-esquerda"]::before { background: color-mix(in srgb, var(--esq) 55%, var(--meio)); }
+.selo[data-faixa="centro-direita"]::before { background: color-mix(in srgb, var(--dir) 55%, var(--meio)); }
+.selo[data-faixa="direita"]::before { background: var(--dir); }
 
 .mundo-rotulos text {
   fill: var(--texto); paint-order: stroke; stroke: var(--fundo);
