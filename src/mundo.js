@@ -27,18 +27,19 @@ const ZOOM_MAX = 60;
 export const ehMonarquia = (p) => /monarqui|monarch/i.test(p.forma ?? '');
 export const anosNoCargo = (desde) => (desde ? (Date.now() - Date.parse(desde)) / 31557600000 : null);
 
-// Quem manda de fato. Dois casos, e a diferença importa:
+// Quem manda de fato. Três casos, e a diferença importa em todos:
 //
-//   Chefes de partidos diferentes — é parlamentarismo de verdade, e quem
-//     governa é o chefe de governo (na Alemanha, o chanceler, não o
-//     presidente).
-//   Mesmo partido — o cargo de cima é o que vale: na China quem manda é Xi
-//     Jinping, não o primeiro-ministro, e a regra de cima elegia o errado.
+//   Partidos diferentes — é parlamentarismo de verdade, e governa o chefe de
+//     governo: na Alemanha, o chanceler, não o presidente.
+//   Mesmo partido — vale o cargo de cima: na China quem manda é Xi Jinping, e
+//     não o primeiro-ministro.
+//   Nenhum dos dois com partido — também o cargo de cima. São regimes
+//     personalistas ou monarquias, onde o primeiro-ministro é executor: a
+//     ficha da Rússia abria no nome de Mikhail Michustin em vez do de Putin.
 export const mandaNoPais = (p) => {
   const e = p.estado, g = p.governo;
-  if (!g?.partido) return e?.partido ? e : g ?? e;
-  if (!e?.partido) return g;
-  return e.partido === g.partido ? e : g;
+  if (g?.partido && e?.partido) return e.partido === g.partido ? e : g;
+  return g?.partido ? g : e ?? g;
 };
 
 // A faixa do país, de qualquer um dos dois cargos que a tiver.

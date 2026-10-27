@@ -118,24 +118,30 @@ const ORIGEM_FAIXA = {
   manual: 'classificação deste site',
 };
 // A mesma regra de src/mundo.js: com partidos diferentes manda o chefe de
-// governo; com o mesmo partido, o chefe de Estado.
+// governo; com o mesmo partido, ou com nenhum dos dois tendo partido, o chefe
+// de Estado.
 const manda = (d) => {
   const e = d.estado, g = d.governo;
-  if (!g?.partido) return e?.partido ? e : g ?? e;
-  if (!e?.partido) return g;
-  return e.partido === g.partido ? e : g;
+  if (g?.partido && e?.partido) return e.partido === g.partido ? e : g;
+  return g?.partido ? g : e ?? g;
 };
 
 function paginaPais(d) {
   const c = manda(d);
   const faixa = c?.faixa;
   const url = `${SITE}pais/${d.iso}.html`;
-  const titulo = `Quem governa ${d.nome} | Global Power Line`;
-  const resumo = [
-    c ? `${c.nome} governa ${d.nome}` : `Quem governa ${d.nome}`,
-    c?.partido ? `pelo ${c.partido}` : d.semPartido ? 'sem partido' : null,
-    faixa ? `partido de ${FAIXA_TEXTO[faixa]}` : null,
-  ].filter(Boolean).join(', ') + '.';
+  // O nome do país vem na frente, como etiqueta, pra fugir do artigo: em
+  // português é "a Rússia" mas "Portugal", e não há regra que acerte os 195.
+  // Pelo mesmo motivo o partido entra como "do partido X", que serve pros dois
+  // gêneros — "pelo União Democrata-Cristã" saía torto.
+  const titulo = `${d.nome} — quem governa hoje | Global Power Line`;
+  // Travessão no lugar de preposição: "pelo União Democrata-Cristã" saía
+  // torto, e "pelo partido Partido Social Democrata" repetia a palavra.
+  const resumo = (c
+    ? [`${d.nome}: ${c.nome} —`,
+      [c.partido ?? (d.semPartido ? 'sem filiação partidária' : 'partido não informado'),
+        faixa && (c.partido ? `de ${FAIXA_TEXTO[faixa]}` : `com apoio de partido de ${FAIXA_TEXTO[faixa]}`)].filter(Boolean).join(', ')]
+    : [`${d.nome}: quem governa`]).join(' ') + '.';
   const linhas = [
     d.forma && ['Forma de governo', d.forma],
     d.estado && ['Chefe de Estado', `${d.estado.nome}${d.estado.partido ? ` — ${d.estado.partido}` : ' — sem partido'}`],
@@ -175,7 +181,8 @@ small{color:#52514e}
 <body>
 <main>
 <a href="../">Global Power Line</a>
-<h1>Quem governa ${esc(d.nome)}</h1>
+<h1>${esc(d.nome)}</h1>
+<p>Quem governa hoje</p>
 <p>${esc(resumo)}</p>
 <p><a class="botao" href="../#pais=${esc(d.iso)}">Abrir no mapa-múndi</a></p>
 <dl>
