@@ -292,43 +292,7 @@
   ]
  },
  "pautaDoDia": {
-  "data": "2026-10-26",
-  "itens": [
-   {
-    "tipo": "Resultado do 2º turno",
-    "texto": "2º turno — Presidência da República: eleito(a) Lula (PT), com 51,79% dos votos válidos.\n\nVice: Geraldo Alckmin.\n\nQuem fica e quem sai em 2027: https://poderbrasileiro.github.io/#rede\n#Eleições2026 #SegundoTurno"
-   },
-   {
-    "tipo": "Resultado do 2º turno",
-    "texto": "2º turno — Governo de AC: eleito(a) Mailza Assis (PP), com 66,21% dos votos válidos.\n\nVice: Jessica Sales.\n\nQuem fica e quem sai em 2027: https://poderbrasileiro.github.io/#rede\n#Eleições2026 #SegundoTurno #Acre"
-   },
-   {
-    "tipo": "Resultado do 2º turno",
-    "texto": "2º turno — Governo de AM: eleito(a) Omar Aziz (PSD), com 61,42% dos votos válidos.\n\nVice: Alessandra Campelo.\n\nQuem fica e quem sai em 2027: https://poderbrasileiro.github.io/#rede\n#Eleições2026 #SegundoTurno #Amazonas"
-   },
-   {
-    "tipo": "Resultado do 2º turno",
-    "texto": "2º turno — Governo de DF: eleito(a) Celina Leão (PP), com 57,18% dos votos válidos.\n\nVice: Gustavo Rocha.\n\nQuem fica e quem sai em 2027: https://poderbrasileiro.github.io/#rede\n#Eleições2026 #SegundoTurno #DistritoFederal"
-   },
-   {
-    "tipo": "Estreia",
-    "texto": "Quem governa cada um dos 195 países do mundo, e há quanto tempo. E o Brasil por dentro: Congresso, STF, governos estaduais e as 5.569 prefeituras.\n\nDados públicos, atualizados todo dia. Sem vínculo com governo ou partido.\n\nhttps://poderbrasileiro.github.io/c/poderbr.html\n#Brasil #Congresso",
-    "fixar": true,
-    "previa": "poderbr.png",
-    "alt": "Cartão do Global Power Line: o título “Quem ocupa o poder” sobre o semicírculo do Senado, com 81 cadeiras da esquerda (vermelho) para a direita (azul)."
-   },
-   {
-    "tipo": "Estreia",
-    "texto": "Senado Federal em 2027: 81% de direita e 19% de esquerda a partir de fevereiro de 2027.\n\nMais à direita que hoje, que está em 79%. São 54 eleitos em 2026 mais 27 com mandato até 2031. Cadeira por cadeira:\n\nhttps://poderbrasileiro.github.io/c/2027-senador.html\n#Senado #Eleições2026",
-    "previa": "2027-senador.png",
-    "alt": "Gráfico — Senado Federal em 2027: 81 cadeiras em semicírculo, da esquerda (vermelho) para a direita (azul) pela posição do partido. 19% de esquerda e 81% de direita."
-   },
-   {
-    "tipo": "Estreia",
-    "texto": "Câmara dos Deputados em 2027: 77% de direita e 23% de esquerda a partir de fevereiro de 2027.\n\nMais à direita que hoje, que está em 76%. Os 513 trocam de uma vez. Cadeira por cadeira:\n\nhttps://poderbrasileiro.github.io/c/2027-deputado.html\n#Câmara #Eleições2026",
-    "previa": "2027-deputado.png",
-    "alt": "Gráfico — Câmara dos Deputados em 2027: 513 cadeiras em semicírculo, da esquerda (vermelho) para a direita (azul) pela posição do partido. 23% de esquerda e 77% de direita."
-   }
-  ]
+  "data": "2026-10-27",
+  "itens": []
  }
 }
