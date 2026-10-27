@@ -114,7 +114,7 @@ function novidades(pecs, eleicao, historico, estado) {
         id, data: v.data,
         texto: montar(
           `${pec.titulo} — ${resultado} no plenário ${pec.casa === 'Senado' ? 'do Senado' : 'da Câmara'} em ${dataBr(v.data)}.\nSim ${v.placar.Sim ?? 0} · Não ${v.placar['Não'] ?? 0}`,
-          pec.ementa, `Veja como cada parlamentar votou: ${SITE}#pecs`,
+          pec.ementa, `Tramitação e votos nominais: ${pec.link}`,
           ['#PEC', TAG_CASA[pec.casa], '#Congresso']),
       });
     }
@@ -132,7 +132,7 @@ function novidades(pecs, eleicao, historico, estado) {
       itens.push({
         id, data: eleicao.geradoEm.slice(0, 10), resolve: id,
         texto: montar(`2º turno — ${rotulo}: eleito(a) ${comPartido(e)}${e.pct ? `, com ${e.pct}% dos votos válidos` : ''}.`,
-          e.vice ? `Vice: ${e.vice.nome}.` : '', `Quem fica e quem sai em 2027: ${SITE}#rede`,
+          e.vice ? `Vice: ${e.vice.nome}.` : '', `Quem fica e quem sai em 2027: ${SITE}#mapa`,
         ['#Eleições2026', '#SegundoTurno', chave.startsWith('governador:') ? tagDoEstado(chave.slice(11)) : null]),
       });
     }
@@ -249,7 +249,7 @@ if (process.argv.some((a) => a.startsWith('--composicao'))) {
   const b = img.balanco;
   const texto = montar(`${img.titulo} hoje: ${b.dir}% de direita e ${b.esq}% de esquerda${b.centro ? `, ${b.centro}% no centro` : ''}.`,
     `Contagem de cabeças pela posição do partido de cada um dos ${b.gente.length}, segundo classificação de cientistas políticos. Quem é quem, cadeira por cadeira:`,
-    `${SITE}#rede`, TAG_GRUPO[cargo]);
+    `${SITE}#mapa`, TAG_GRUPO[cargo]);
   console.log(texto + '\n');
   if (ensaio) process.exit(0);
   console.log(`postado: https://x.com/i/status/${await postarNoX(texto, chaves, img)}`);
@@ -275,10 +275,10 @@ async function retratoDoDia() {
   return {
     id: `retrato:${cargo}:${hoje}`, data: hoje, cargo,
     texto: montar(`${titulo} hoje: ${b.dir}% de direita e ${b.esq}% de esquerda.`,
-      `Contagem de cabeças pela posição do partido, entre os ${b.conhecidos.toLocaleString('pt-BR')} com partido conhecido.`, `${SITE}#rede`,
+      `Contagem de cabeças pela posição do partido, entre os ${b.conhecidos.toLocaleString('pt-BR')} com partido conhecido.`, `${SITE}#mapa`,
       TAG_GRUPO[cargo]),
     imagem: {
-      png, arquivo: `${cargo}.png`, destino: '#rede',
+      png, arquivo: `${cargo}.png`, destino: '#mapa',
       titulo: `${titulo} hoje`,
       descricao: `${b.dir}% de direita e ${b.esq}% de esquerda, entre os ${b.conhecidos.toLocaleString('pt-BR')} com partido conhecido.`,
       alt: `Gráfico — ${titulo}: ${b.gente.length} pessoas ordenadas da esquerda (vermelho) para a direita (azul) pela posição do partido. ${b.esq}% de esquerda e ${b.dir}% de direita.`,
@@ -318,9 +318,9 @@ async function postsDeEstreia() {
       id: `estreia:2027-${cargo}`, data: hoje,
       texto: montar(`${f.titulo}: ${f.balanco.dir}% de direita e ${f.balanco.esq}% de esquerda a partir de fevereiro de 2027.`,
         `${mudou} ${cargo === 'senador' ? 'São 54 eleitos em 2026 mais 27 com mandato até 2031.' : 'Os 513 trocam de uma vez.'} Cadeira por cadeira:`,
-        `${SITE}#rede`, cargo === 'senador' ? ['#Senado', '#Eleições2026'] : ['#Câmara', '#Eleições2026']),
+        `${SITE}#mapa`, cargo === 'senador' ? ['#Senado', '#Eleições2026'] : ['#Câmara', '#Eleições2026']),
       imagem: {
-        png: f.png, arquivo: `2027-${cargo}.png`, destino: '#rede',
+        png: f.png, arquivo: `2027-${cargo}.png`, destino: '#mapa',
         titulo: f.titulo,
         descricao: `${f.balanco.dir}% de direita e ${f.balanco.esq}% de esquerda a partir de fevereiro de 2027. Hoje: ${f.hoje.dir}% e ${f.hoje.esq}%.`,
         alt: `Gráfico — ${f.titulo}: ${f.balanco.gente.length} cadeiras em semicírculo, da esquerda (vermelho) para a direita (azul) pela posição do partido. ${f.balanco.esq}% de esquerda e ${f.balanco.dir}% de direita.`,
@@ -335,9 +335,9 @@ async function postsDeEstreia() {
       id: `estreia:contagem-${hoje}`, data: hoje,
       texto: montar(`Faltam ${c.dias} dias para o 2º turno, em ${c.quando}.`,
         `${c.candidatos.map((x) => `${x.nome} (${x.partido}) ${x.pct}%`).join(' e ')} no 1º turno. No site dá pra ver quem fica e quem sai do poder em 2027, estado por estado:`,
-        `${SITE}#rede`, ['#Eleições2026', '#SegundoTurno']),
+        `${SITE}#mapa`, ['#Eleições2026', '#SegundoTurno']),
       imagem: {
-        png: c.png, arquivo: 'contagem.png', destino: '#rede',
+        png: c.png, arquivo: 'contagem.png', destino: '#mapa',
         titulo: `Faltam ${c.dias} dias para o 2º turno`,
         descricao: `${c.quando}, urnas das 8h às 17h. ${c.candidatos.map((x) => `${x.nome} (${x.partido}) ${x.pct}%`).join(' e ')} no 1º turno.`,
         alt: `Cartão: faltam ${c.dias} dias para o 2º turno, em ${c.quando}. ${c.candidatos.map((x) => `${x.nome} do ${x.partido} teve ${x.pct}%`).join(' e ')} no 1º turno.`,

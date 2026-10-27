@@ -1,0 +1,45 @@
+{
+  "_leia": "Posição de partido que governa e que a Wikidata não classifica. Só entra o que dá pra justificar numa linha e checar na fonte. A chave é o código ISO de 2 letras do país; o site mostra essas entradas como 'classificação deste site', separadas do que vem da Wikidata. Faixas válidas: esquerda, centro-esquerda, centro, centro-direita, direita.",
+  "PL": {
+    "partido": "Coalizão Cívica",
+    "faixa": "centro-direita",
+    "motivo": "Coligação liderada pela Plataforma Cívica, de democracia cristã e liberalismo conservador; o Global Party Survey dá 6,3 à Plataforma Cívica.",
+    "fonte": "https://pt.wikipedia.org/wiki/Coaliga%C3%A7%C3%A3o_C%C3%ADvica"
+  },
+  "KE": {
+    "partido": "United Democratic Alliance",
+    "faixa": "centro-direita",
+    "motivo": "Partido de William Ruto, de perfil conservador e liberal na economia.",
+    "fonte": "https://en.wikipedia.org/wiki/United_Democratic_Alliance_(Kenya)"
+  },
+  "BD": {
+    "partido": "Partido Nacionalista de Bangladesh",
+    "faixa": "direita",
+    "motivo": "Nacionalismo bengali e conservadorismo social.",
+    "fonte": "https://en.wikipedia.org/wiki/Bangladesh_Nationalist_Party"
+  },
+  "DZ": {
+    "partido": "Frente de Libertação Nacional",
+    "faixa": "esquerda",
+    "motivo": "Partido único do pós-independência, de socialismo árabe; mantém o programa socialista no estatuto.",
+    "fonte": "https://en.wikipedia.org/wiki/National_Liberation_Front_(Algeria)"
+  },
+  "BW": {
+    "partido": "Umbrella for Democratic Change",
+    "faixa": "centro-esquerda",
+    "motivo": "Coligação social-democrata que venceu em 2024.",
+    "fonte": "https://en.wikipedia.org/wiki/Umbrella_for_Democratic_Change"
+  },
+  "IQ": {
+    "partido": "Islamic Dawa Party",
+    "faixa": "direita",
+    "motivo": "Islamismo xiita e conservadorismo religioso.",
+    "fonte": "https://en.wikipedia.org/wiki/Islamic_Dawa_Party"
+  },
+  "AG": {
+    "partido": "Partido Trabalhista de Antígua",
+    "faixa": "centro-esquerda",
+    "motivo": "Partido trabalhista de origem sindical, social-democrata.",
+    "fonte": "https://en.wikipedia.org/wiki/Antigua_Labour_Party"
+  }
+}

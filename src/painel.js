@@ -1,8 +1,8 @@
 // Painel lateral: resumo, UF, lista de ministros ou ficha de uma pessoa.
 
 import { h, trocar, CARGOS, CARGO_ELEITO, SITUACOES, destinoDe, selo, textoPartido, ondeAtua, fmtNum, fmtData, semAcento } from './comum.js';
-import { anosNoCargo, ehMonarquia } from './mundo.js';
-import { ROTULO_VOTO, tiposDeVoto, placarCurto, ETAPAS, etapaDe, trilha, selo as seloPec } from './pecs.js';
+import { anosNoCargo, ehMonarquia, faixaDoPais, mandaNoPais } from './mundo.js';
+import { ROTULO_VOTO, placarCurto } from './pecs.js';
 
 function avatar(p, grande = false) {
   const iniciais = p.nome.split(/\s+/).filter((s) => s.length > 2).slice(0, 2).map((s) => s[0]).join('').toUpperCase();
@@ -172,7 +172,7 @@ function blocoNoticias(p, dados) {
   return sec;
 }
 
-export function criarPainel(raiz, dados, { aoEscolherPessoa, aoEscolherUf, aoVerMinistros, aoEscolherPec, aoEscolherPais, aoVerBrasil, linkAtual }) {
+export function criarPainel(raiz, dados, { aoEscolherPessoa, aoEscolherUf, aoVerMinistros, aoEscolherPais, aoAbrirPais, aoVerBrasil, linkAtual }) {
   // Copia o endereço do que está aberto. O clipboard falha em http sem TLS e
   // quando o usuário nega a permissão; nesses casos o link aparece pra copiar
   // à mão, que é melhor que um botão que não faz nada.
@@ -212,7 +212,9 @@ export function criarPainel(raiz, dados, { aoEscolherPessoa, aoEscolherUf, aoVer
       for (const v of pec.votacoes) {
         const voto = Object.keys(v.votos).find((t) => v.votos[t].includes(p.id));
         if (!voto) continue;
-        linhas.push(h('li', {}, h('button', { class: 'prefeito-linha', onclick: () => aoEscolherPec(pec.id) },
+        // Sem a aba de PECs, a linha não leva a lugar nenhum dentro do site:
+        // o link vai pra tramitação na casa, que é onde está a proposta inteira.
+        linhas.push(h('li', {}, h('a', { class: 'prefeito-linha', href: pec.link, target: '_blank', rel: 'noopener noreferrer' },
           h('b', {}, `${pec.titulo} — ${ROTULO_VOTO[voto] ?? voto}`),
           h('small', {}, `${fmtData(v.data)} · ${placarCurto(v)} · ${(pec.ementa ?? '').slice(0, 90)}…`))));
         break;   // só a votação mais recente de cada PEC
@@ -262,39 +264,54 @@ export function criarPainel(raiz, dados, { aoEscolherPessoa, aoEscolherUf, aoVer
   }
 
   // Panorama do mundo, quando a aba Mundo está aberta e nenhum país escolhido.
+  // Lidera pelo espectro, que é o que o mapa mostra; o tempo no poder vem
+  // depois, como segunda leitura.
   function resumoMundo() {
     const paises = dados.mundo?.paises ?? [];
     if (!paises.length) return null;
-    const anos = paises.map((p) => anosNoCargo(p.estado?.desde ?? p.governo?.desde)).filter((a) => a != null);
-    // O ranking exclui monarcas: herdar o trono não é ficar no poder.
+    const conta = (f) => paises.filter((p) => faixaDoPais(p) === f).length;
+    const esquerda = conta('esquerda') + conta('centro-esquerda');
+    const direita = conta('direita') + conta('centro-direita');
+    const semPartido = paises.filter((p) => p.semPartido).length;
+    const semFaixa = paises.filter((p) => !p.semPartido && !faixaDoPais(p)).length;
+
     const velhos = paises
-      .map((p) => ({ p, a: anosNoCargo(p.estado?.desde) }))
+      .map((x) => ({ p: x, a: anosNoCargo(x.estado?.desde) }))
       .filter((x) => x.a != null && !ehMonarquia(x.p)).sort((x, y) => y.a - x.a).slice(0, 5);
-    const comNota = paises.filter((p) => (p.governo?.posicao ?? p.estado?.posicao) != null);
-    return h('section', {}, h('h3', {}, 'O mundo em números'),
-      h('ul', { class: 'contagem' },
-        h('li', {}, h('b', {}, paises.length), ' países'),
-        h('li', {}, h('b', {}, anos.filter((a) => a >= 20).length), ' há 20 anos ou mais no cargo'),
-        h('li', {}, h('b', {}, anos.filter((a) => a < 4).length), ' há menos de 4 anos'),
-        h('li', {}, h('b', {}, comNota.length), ' com posição no espectro')),
-      h('p', { class: 'rotulo' }, 'Mais tempo no cargo, fora monarquias'),
-      h('ul', { class: 'prefeitos' }, velhos.map(({ p, a }) => h('li', {},
-        h('button', { class: 'prefeito-linha', onclick: () => aoEscolherPais(p.iso) },
-          h('b', {}, `${p.nome} — ${p.estado.nome}`),
-          h('small', {}, `há ${fmtNum(a, 0)} anos`))))),
-      h('p', { class: 'fraco' }, 'Clique num país para ver quem governa. A posição de esquerda e direita é a do partido, pelo Global Party Survey de 2019 — não é uma medida do país.'));
+
+    return [
+      h('section', {}, h('h3', {}, 'Quem governa, hoje'),
+        h('ul', { class: 'contagem' },
+          h('li', {}, h('b', {}, esquerda), ' países de esquerda ou centro-esquerda'),
+          h('li', {}, h('b', {}, conta('centro')), ' de centro'),
+          h('li', {}, h('b', {}, direita), ' de direita ou centro-direita'),
+          h('li', {}, h('b', {}, semPartido), ' governados por quem não tem partido')),
+        h('p', { class: 'fraco' }, `Faltam ${semFaixa}, onde o partido existe mas ninguém o classificou. A faixa é a do partido de quem governa — não é uma nota do país.`)),
+      h('section', {}, h('h3', {}, 'Mais tempo no cargo'),
+        h('ul', { class: 'prefeitos' }, velhos.map(({ p: x, a }) => h('li', {},
+          h('button', { class: 'prefeito-linha', onclick: () => aoEscolherPais(x.iso) },
+            h('b', {}, `${x.nome} — ${x.estado.nome}`),
+            h('small', {}, `há ${fmtNum(a, 0)} anos`))))),
+        h('p', { class: 'fraco' }, 'Monarca hereditário fica fora: herdar o trono não é a mesma coisa que não sair do poder.')),
+    ];
   }
 
   return {
     resumo(mundo) {
-      if (mundo) { const r = resumoMundo(); if (r) return trocar(raiz, compartilhar(), h('h2', {}, 'O poder no mundo'), r); }
+      if (mundo) {
+        const r = resumoMundo();
+        if (r) {
+          return trocar(raiz, compartilhar(), h('h2', {}, 'O poder no mundo'),
+            h('p', {}, 'Clique num país para ver quem governa. Dois cliques abrem as divisões internas dele.'), r);
+        }
+      }
       return this.resumoBrasil();
     },
     resumoBrasil() {
       const conta = (c) => dados.pessoas.filter((p) => p.cargo === c).length;
       trocar(raiz, 
         h('h2', {}, 'Comece por aqui'),
-        h('p', {}, 'Clique num estado do mapa, ou numa bolinha da rede de poder, para abrir quem está lá.'),
+        h('p', {}, 'Clique num estado do mapa para abrir quem está lá.'),
         h('ul', { class: 'contagem' },
           h('li', {}, h('b', {}, '2'), ' na Presidência'),
           h('li', {}, h('b', {}, conta('ministro')), ' ministros'),
@@ -345,73 +362,55 @@ export function criarPainel(raiz, dados, { aoEscolherPessoa, aoEscolherUf, aoVer
       const a = anosNoCargo(desde);
       return a == null ? null : `há ${fmtNum(a, a < 10 ? 1 : 0)} ano${a >= 2 ? 's' : ''}`;
     };
+
+    // De onde saiu a faixa. É a parte que o leitor precisa pra discordar com
+    // conhecimento de causa: a Wikidata dizendo, um survey de 2019 medindo,
+    // uma dedução a partir das correntes do partido, ou escolha deste site.
+    const ORIGEM = {
+      alinhamento: 'Classificação da própria Wikidata para o partido.',
+      survey: 'Posição do partido no Global Party Survey de 2019, survey com cientistas políticos.',
+      ideologia: 'Deduzida das correntes que o partido declara na Wikidata — comunismo, social-democracia, conservadorismo e afins. É leitura deste site, não classificação de ninguém.',
+      manual: 'Classificação deste site, porque a Wikidata não traz nenhuma para este partido.',
+    };
+
     const bloco = (titulo, c) => {
       if (!c) return null;
       const tempo = anos(c.desde);
       return h('section', {}, h('h3', {}, titulo),
         h('p', {}, h('b', {}, c.nome)),
-        h('p', { class: 'fraco' }, [c.partido ?? 'sem partido informado', tempo && `no cargo ${tempo}`].filter(Boolean).join(' · ')),
-        c.posicao != null
+        h('p', { class: 'fraco' }, [c.partido ?? 'sem partido', tempo && `no cargo ${tempo}`].filter(Boolean).join(' · ')),
+        c.faixa
           ? h('div', {},
-            h('p', { class: 'numero' }, h('b', {}, fmtNum(c.posicao, 1)), ' de 10 na régua esquerda–direita'),
-            regua(c.posicao / 10, ['esquerda', 'direita']),
-            h('p', { class: 'fraco' }, `Posição do partido no Global Party Survey de 2019${c.partidoNoSurvey && c.partidoNoSurvey !== c.partido ? ` (lá chamado “${c.partidoNoSurvey}”)` : ''}. É a posição do partido naquele ano, não uma medida desta pessoa.`))
-          : c.posicaoRotulo
-            ? h('p', { class: 'fraco' }, `Classificado como ${c.posicaoRotulo.toLowerCase()} na Wikidata. Sem nota no survey, então sem posição na régua.`)
-            : h('p', { class: 'fraco' }, 'Sem posição conhecida para o partido.'),
+            h('p', {}, h('span', { class: 'selo', 'data-faixa': c.faixa }, c.posicaoRotulo ?? c.faixa)),
+            c.posicao != null
+              ? h('div', {},
+                h('p', { class: 'numero' }, h('b', {}, fmtNum(c.posicao, 1)), ' de 10 na régua esquerda–direita'),
+                regua(c.posicao / 10, ['esquerda', 'direita']))
+              : null,
+            h('p', { class: 'fraco' }, ORIGEM[c.faixaFonte] ?? ''),
+            c.motivo ? h('p', { class: 'fraco' }, c.motivo, c.motivoFonte ? [' ', h('a', { href: c.motivoFonte, target: '_blank', rel: 'noopener noreferrer' }, 'Fonte ↗')] : null) : null,
+            c.partidoNoSurvey && c.partidoNoSurvey !== c.partido
+              ? h('p', { class: 'fraco' }, `No survey o partido aparece como “${c.partidoNoSurvey}”.`) : null)
+          : c.semPartido
+            ? h('p', { class: 'fraco' }, 'Governa sem filiação partidária. Pode ser monarquia onde partido é proibido, governo de transição, ou presidente eleito por um movimento sem legenda — nos três casos não existe posição de partido para mostrar.')
+            : h('p', { class: 'fraco' }, 'O partido existe, mas ninguém o classificou no espectro: nem a Wikidata, nem o survey.'),
         h('ul', { class: 'buscas' }, h('li', {}, h('a', { href: c.wikidata, target: '_blank', rel: 'noopener noreferrer' }, 'Conferir na Wikidata ↗'))));
     };
+
     trocar(raiz,
       compartilhar(),
       h('p', { class: 'sobretitulo' }, d.forma ?? 'País'),
       h('h2', {}, d.nome),
-      d.iso === 'BR'
-        ? h('button', { class: 'botao', onclick: aoVerBrasil }, 'Ver o Brasil por dentro')
-        : null,
+      h('p', {},
+        h('button', { class: 'botao', onclick: () => aoAbrirPais(d.iso) }, 'Ver as divisões internas'),
+        d.iso === 'BR' ? [' ', h('button', { class: 'botao vazio', onclick: aoVerBrasil }, 'O Brasil por dentro')] : null),
       d.acumula
         ? bloco('Chefe de Estado e de governo', d.estado)
         : [bloco('Chefe de Estado', d.estado), bloco('Chefe de governo', d.governo)],
       h('section', {}, h('h3', {}, 'De onde vem'),
-        h('p', { class: 'fraco' }, 'Quem ocupa o cargo e o partido vêm da Wikidata, editada por voluntários — em país com troca rápida de governo ela pode estar atrasada. A posição no espectro vem do Global Party Survey de 2019, feito com cientistas políticos de cada país.'),
+        h('p', { class: 'fraco' }, 'Quem ocupa o cargo e o partido vêm da Wikidata, editada por voluntários — em país com troca rápida de governo ela pode estar atrasada. As divisões internas são da Natural Earth, em domínio público.'),
         h('ul', { class: 'buscas' }, h('li', {}, h('a', { href: d.wikidata, target: '_blank', rel: 'noopener noreferrer' }, 'O país na Wikidata ↗')))));
     raiz.scrollTop = 0;
-    },
-
-    pec(id) {
-      const d = dados.pecs;
-      const p = d?.pecs.find((x) => x.id === id);
-      if (!p) return this.resumo();
-      const e = p.estagio;
-      // Quem está no cargo hoje vira botão pra ficha; quem já saiu fica só o nome.
-      const votante = (pid) => {
-        const [nome, partido, uf] = d.nomes[pid] ?? ['?', null, null];
-        const rotulo = `${nome} (${[partido, uf].filter(Boolean).join('-')})`;
-        return dados.pessoaPorId.has(pid)
-          ? h('button', { class: 'votante', onclick: () => aoEscolherPessoa(pid) }, rotulo)
-          : h('span', { class: 'votante' }, rotulo);
-      };
-      trocar(raiz,
-        h('p', { class: 'sobretitulo' }, `Proposta de emenda à Constituição · ${p.casa}`),
-        h('h2', {}, p.titulo),
-        h('p', {}, p.ementa),
-        compartilhar(),
-        h('div', { class: 'pec-etapa' }, trilha(p), seloPec(p), h('p', { class: 'fraco' }, ETAPAS[etapaDe(p)].explica)),
-        h('section', {}, h('h3', {}, p.casa === 'Senado' ? 'Estágio no Senado' : 'Estágio na Câmara'),
-          e.situacao ? h('p', {}, h('b', {}, e.situacao), e.orgao ? ` — ${e.orgao}` : '') : null,
-          e.tramitacao ? h('p', { class: e.situacao ? 'fraco' : null }, e.situacao ? `Último andamento: ${e.tramitacao}` : e.tramitacao) : null,
-          e.data ? h('p', { class: 'fraco' }, `Em ${fmtData(e.data)}.`) : null,
-          h('p', { class: 'fraco' }, 'Precisa de 3/5 em dois turnos nas duas casas: 308 deputados e 49 senadores.'),
-          h('ul', { class: 'buscas' }, h('li', {}, h('a', { href: p.link, target: '_blank', rel: 'noopener noreferrer' }, `Tramitação completa na ${p.casa === 'Senado' ? 'página do Senado' : 'página da Câmara'} ↗`)))),
-        p.votacoes.length
-          ? p.votacoes.map((v) => h('section', {},
-            h('h3', {}, `Votação de ${fmtData(v.data)}${v.resultado ? ` · ${v.resultado}` : ''}`),
-            h('p', { class: 'numero' }, h('b', {}, v.placar.Sim ?? 0), ' sim · ', h('b', {}, v.placar['Não'] ?? 0), ' não'),
-            h('p', { class: 'fraco' }, v.descricao),
-            tiposDeVoto(v.votos).map((t) => h('details', { class: 'votos' },
-              h('summary', {}, `${ROTULO_VOTO[t] ?? t} (${v.votos[t].length})`),
-              h('div', { class: 'votantes' }, v.votos[t].map(votante).sort((a, b) => a.textContent.localeCompare(b.textContent, 'pt')))))))
-          : h('section', {}, h('p', { class: 'fraco' }, 'Sem votação nominal no período: a simbólica não registra voto individual.')));
-      raiz.scrollTop = 0;
     },
 
     pessoa(id) {

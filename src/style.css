@@ -13,6 +13,9 @@
   --dir: #2a6fc9;
   --aviso-fundo: #fdf3d6;
   --aviso-borda: #e0b93a;
+  /* "governa sem partido": propositalmente fora da régua esquerda-direita,
+     pra ninguém ler como "mais ou menos no centro". */
+  --sem-partido: #b7a98f;
 }
 /* Tema escuro em dois lugares de propósito: o @media atende quem não mexeu na
    chave (e o :not deixa a escolha "claro" vencer o sistema), e o [data-theme]
@@ -32,6 +35,7 @@
     --dir: #4a90e8;
     --aviso-fundo: #3a3114;
     --aviso-borda: #a58420;
+    --sem-partido: #7a6f58;
   }
 }
 :root[data-theme="escuro"] {
@@ -48,6 +52,7 @@
   --dir: #4a90e8;
   --aviso-fundo: #3a3114;
   --aviso-borda: #a58420;
+  --sem-partido: #7a6f58;
 }
 :root[data-theme="claro"] { color-scheme: light; }
 
@@ -459,14 +464,64 @@ span.votante { color: var(--texto-2); border-style: dashed; }
 .pecs-controles .filtro { flex: 1 1 220px; max-width: 360px; }
 
 /* ---------- aba Mundo ---------- */
-.mundo-modos { display: flex; gap: 4px; padding: 3px; background: var(--fundo-2); border-radius: 10px; }
 .mundo-topo { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; }
+.mundo-modos { display: flex; gap: 4px; padding: 3px; background: var(--fundo-2); border-radius: 10px; }
 .mundo-modos button { padding: 6px 14px; border: 0; border-radius: 8px; background: none; color: var(--texto-2); font: inherit; }
 .mundo-modos button[aria-selected="true"] { background: var(--fundo); color: var(--texto); font-weight: 600; box-shadow: 0 1px 2px rgb(0 0 0 / 0.15); }
-.pais { stroke: var(--borda); stroke-width: 0.4; stroke-linejoin: round; cursor: pointer; transition: fill 0.35s ease, opacity 0.12s; }
+.mundo-voltar {
+  padding: 6px 14px; border: 1px solid var(--borda); border-radius: 8px;
+  background: var(--fundo-2); color: var(--texto); font-weight: 600;
+}
+.mundo-voltar[hidden] { display: none; }
+
+/* O palco recorta o mapa: com zoom, o país sai do quadro e não pode vazar por
+   cima da pagina. O cursor de mão avisa que dá pra arrastar. */
+.mundo-palco { position: relative; overflow: hidden; border-radius: 12px; background: var(--fundo-2); }
+.mapa-mundi { display: block; width: 100%; height: auto; cursor: grab; touch-action: none; }
+.mapa-mundi:active { cursor: grabbing; }
+
+.mundo-lupas { position: absolute; top: 10px; right: 10px; display: flex; flex-direction: column; gap: 4px; }
+.mundo-lupas button {
+  width: 30px; height: 30px; display: grid; place-items: center; font-size: 17px; line-height: 1;
+  border: 1px solid var(--borda); border-radius: 8px; background: var(--fundo); color: var(--texto);
+}
+.mundo-rodape { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
+.mundo-regioes { display: flex; flex-wrap: wrap; gap: 6px; }
+.mundo-regioes button {
+  padding: 4px 11px; font-size: 13px; border: 1px solid var(--borda); border-radius: 999px;
+  background: none; color: var(--texto-2);
+}
+.mundo-regioes button:hover { background: var(--fundo-2); color: var(--texto); }
+.mundo-ajuda, .mundo-recado { font-size: 12px; }
+.mundo-recado[hidden] { display: none; }
+
+/* vector-effect: o traço nao engorda com o zoom, e é por isso que não há
+   conta de 1/k espalhada pelo codigo do mapa. */
+.pais {
+  stroke: var(--borda); stroke-width: 0.5; stroke-linejoin: round; cursor: pointer;
+  vector-effect: non-scaling-stroke; transition: fill 0.35s ease, opacity 0.2s;
+}
 .pais:hover { opacity: 0.8; }
 .pais.ativa { stroke: var(--destaque); stroke-width: 2; }
+/* País aberto: os outros recuam, mas não desaparecem — o entorno ajuda a
+   saber onde a gente está. */
+.pais.apagada { opacity: 0.28; pointer-events: none; }
+.divisao {
+  stroke: var(--fundo); stroke-width: 0.9; stroke-linejoin: round; cursor: pointer;
+  vector-effect: non-scaling-stroke;
+}
+.divisao:hover { opacity: 0.75; }
+
+.mundo-rotulos text {
+  fill: var(--texto); paint-order: stroke; stroke: var(--fundo);
+  stroke-linejoin: round; text-anchor: middle; pointer-events: none; font-weight: 600;
+}
+.divisao-rotulos text { font-weight: 500; fill: var(--texto-2); }
+
 .legenda-tempo { display: flex; align-items: center; gap: 2px; }
 .legenda-tempo i { display: inline-block; width: 22px; height: 10px; }
 .legenda-tempo i:first-of-type { border-radius: 5px 0 0 5px; }
 .legenda-tempo i:last-of-type { border-radius: 0 5px 5px 0; }
+.legenda-faixas { gap: 14px; flex-wrap: wrap; }
+.legenda-faixa { display: inline-flex; align-items: center; gap: 5px; }
+.legenda-faixa i, .legenda-cor { display: inline-block; width: 16px; height: 16px; border-radius: 4px; }

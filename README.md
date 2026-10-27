@@ -1,14 +1,17 @@
 # Global Power Line
 
-Quem ocupa o poder, em duas escalas.
+Onde cada país está entre a esquerda e a direita, segundo o partido de quem
+governa.
 
-**O mundo:** quem governa cada um dos 195 países, há quanto tempo está no cargo
-e onde o partido fica entre esquerda e direita.
+**O mundo é o mapa principal.** Arrasta, aproxima com a roda ou pelos atalhos
+de região, e dois cliques num país abrem as divisões internas dele — estados,
+províncias, departamentos. A cor é a faixa do partido que governa; quem governa
+sem partido tem cor própria, porque isso é informação e não dado faltando.
 
-**O Brasil por dentro:** presidente, vice, ministros, ministros do STF,
-governadores, senadores, deputados federais, estaduais e prefeitos. Três visões dos mesmos dados — **mapa**, **rede de
-poder** (quadro dos três poderes × União, estados e municípios) e **lista** — e uma ficha por pessoa com
-posição esquerda × direita e links de investigações e notícias.
+**O Brasil por dentro**, em segundo plano: presidente, vice, ministros,
+ministros do STF, governadores, senadores, deputados federais, estaduais e
+prefeitos, com uma ficha por pessoa, posição esquerda × direita, votos em
+plenário e em PECs e links de investigações e notícias.
 
 Projeto pessoal, site estático, sem servidor.
 
@@ -30,6 +33,15 @@ npm run prefeitos  # prefeitos eleitos em 2024 e malhas municipais (minutos; rod
 npm run noticias   # manchetes dos feeds RSS    -> public/data/noticias.json (acumula a cada rodada)
 ```
 
+Fora da rodada diária, porque fronteira interna não muda de mês pra mês:
+
+```bash
+npm run subdivisoes   # estados e províncias de 241 países -> public/data/div/<ISO2>.json
+```
+
+Ele baixa 40 MB da Natural Earth pra `tmp/`, fatia por país e grava TopoJSON
+pequeno, que fica commitado. Rodar de novo só se a fonte mudar.
+
 `coletar` aborta sem gravar nada se alguma contagem vier errada (27 UFs, 27
 governadores, ~81 senadores, 30+ ministros). É de propósito: governadores vêm
 de uma tabela da Wikipédia, e se o formato dela mudar o parser quebra.
@@ -46,8 +58,9 @@ de uma tabela da Wikipédia, e se o formato dela mudar o parser quebra.
 | PECs (estágio e votos) | Dados Abertos da Câmara e do Senado |
 | Eleitos de 2026 que ainda não assumiram | resultado oficial do TSE (os que não ocupam cargo hoje) |
 | Quem governa cada país | Wikidata |
-| Posição dos partidos no mundo | Global Party Survey 2019 (domínio público) |
+| Faixa do partido no mundo | Wikidata (classificação e correntes declaradas), Global Party Survey 2019 e `data/mundo-manual.json` |
 | Mapa-múndi | Natural Earth, via world-atlas |
+| Divisões internas dos países | Natural Earth 1:10m admin-1 (domínio público) |
 | Mapa e UFs | IBGE |
 | Presidente e vice | `data/manual.json` |
 | Posição dos partidos | `data/partidos.json` |

@@ -65,8 +65,8 @@ export async function paginaDoCartao({ slug, titulo, descricao, imagem, alt, des
 <h1>${esc(titulo)}</h1>
 <p class="fraco">${esc(descricao)}</p>
 <p><img src="../cartoes/${esc(imagem)}" alt="${esc(alt)}"></p>
-<p><a class="botao" href="../${esc(destino ?? '#rede')}">Ver no quadro interativo</a></p>
-<p class="fraco">Dados públicos da Câmara, do Senado, do TSE e do IBGE. A posição de esquerda e direita é a do partido de cada pessoa, segundo classificação de cientistas políticos — não é uma medida individual.</p>`;
+<p><a class="botao" href="../${esc(destino ?? '#mundo')}">Ver no quadro interativo</a></p>
+<p class="fraco">Dados públicos da Câmara, do Senado, do TSE e do IBGE, e da Wikidata para o resto do mundo. A posição de esquerda e direita é a do partido, não uma medida da pessoa nem do país.</p>`;
   await writeFile(new URL(`public/c/${slug}.html`, RAIZ), pagina(`${titulo} | Global Power Line`, descricao, cabeca, corpo));
   return url;
 }

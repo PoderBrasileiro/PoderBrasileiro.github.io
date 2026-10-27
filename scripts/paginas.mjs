@@ -2,12 +2,14 @@
 //
 //   - p/<id>.html ...... uma página estática por pessoa, com nome, cargo,
 //                        partido e situação em 2027, e o link pro quadro
+//   - pais/<ISO>.html .. uma por país, com quem governa e a faixa no espectro
 //   - sitemap.xml ...... a home e todas essas páginas
 //   - robots.txt
 //
 // Por que existe: o site é uma página só, montada no navegador. Pro Google
-// isso é um endereço único — "Fulano senador" nunca apareceria na busca.
-// As páginas estáticas dão um endereço e um texto pra cada pessoa.
+// isso é um endereço único — "Fulano senador" ou "quem governa a Noruega"
+// nunca apareceria na busca. As páginas estáticas dão um endereço e um texto
+// pra cada pessoa e pra cada país.
 //
 // O endereço do site vem de SITE_URL (o workflow define). Ele vai no sitemap
 // e nas tags canonical, então precisa ser o endereço público de verdade.
@@ -20,6 +22,7 @@ const SITE = (process.env.SITE_URL ?? 'https://poderbrasileiro.github.io/').repl
 const ler = async (nome) => JSON.parse(await readFile(new URL(`data/${nome}`, DIST), 'utf8'));
 const brasil = await ler('brasil.json');
 const eleicao = await ler('eleicao2026.json').catch(() => null);
+const mundo = await ler('mundo.json').catch(() => null);
 
 const CARGO_ELEITO = { governador: 'Governador(a) eleito(a)', senador: 'Senador(a) eleito(a)', deputado: 'Deputado(a) federal eleito(a)' };
 const CARGO = {
@@ -91,7 +94,7 @@ small{color:#52514e}
 <dl>
 ${linhas.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('\n')}
 </dl>
-<p><small>No quadro interativo: votos em plenário e em PECs, notícias ligadas a investigações e a posição no mapa e na rede de poder. Dados públicos, coletados em ${esc(brasil.geradoEm.slice(0, 10).split('-').reverse().join('/'))}. A posição esquerda × direita é a do partido, não uma medida da pessoa.</small></p>
+<p><small>No quadro interativo: votos em plenário e em PECs, notícias ligadas a investigações e a posição no mapa. Dados públicos, coletados em ${esc(brasil.geradoEm.slice(0, 10).split('-').reverse().join('/'))}. A posição esquerda × direita é a do partido, não uma medida da pessoa.</small></p>
 </main>
 </body>
 </html>
@@ -101,8 +104,98 @@ ${linhas.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('\n')}
 await mkdir(new URL('p/', DIST), { recursive: true });
 for (const p of brasil.pessoas) await writeFile(new URL(`p/${p.id}.html`, DIST), pagina(p));
 
+
+// ---------- uma página por país ----------
+
+const FAIXA_TEXTO = {
+  esquerda: 'esquerda', 'centro-esquerda': 'centro-esquerda', centro: 'centro',
+  'centro-direita': 'centro-direita', direita: 'direita',
+};
+const ORIGEM_FAIXA = {
+  alinhamento: 'classificação da Wikidata para o partido',
+  survey: 'posição do partido no Global Party Survey de 2019',
+  ideologia: 'deduzida das correntes que o partido declara na Wikidata',
+  manual: 'classificação deste site',
+};
+// A mesma regra de src/mundo.js: com partidos diferentes manda o chefe de
+// governo; com o mesmo partido, o chefe de Estado.
+const manda = (d) => {
+  const e = d.estado, g = d.governo;
+  if (!g?.partido) return e?.partido ? e : g ?? e;
+  if (!e?.partido) return g;
+  return e.partido === g.partido ? e : g;
+};
+
+function paginaPais(d) {
+  const c = manda(d);
+  const faixa = c?.faixa;
+  const url = `${SITE}pais/${d.iso}.html`;
+  const titulo = `Quem governa ${d.nome} | Global Power Line`;
+  const resumo = [
+    c ? `${c.nome} governa ${d.nome}` : `Quem governa ${d.nome}`,
+    c?.partido ? `pelo ${c.partido}` : d.semPartido ? 'sem partido' : null,
+    faixa ? `partido de ${FAIXA_TEXTO[faixa]}` : null,
+  ].filter(Boolean).join(', ') + '.';
+  const linhas = [
+    d.forma && ['Forma de governo', d.forma],
+    d.estado && ['Chefe de Estado', `${d.estado.nome}${d.estado.partido ? ` — ${d.estado.partido}` : ' — sem partido'}`],
+    d.governo && !d.acumula && ['Chefe de governo', `${d.governo.nome}${d.governo.partido ? ` — ${d.governo.partido}` : ' — sem partido'}`],
+    c?.desde && ['No cargo desde', c.desde.split('-').reverse().join('/')],
+    faixa && ['Faixa no espectro', `${FAIXA_TEXTO[faixa]}${c.faixaFonte ? ` (${ORIGEM_FAIXA[c.faixaFonte]})` : ''}`],
+    c?.posicao != null && ['Posição do partido (0 = esquerda, 10 = direita)', String(c.posicao).replace('.', ',')],
+  ].filter(Boolean);
+
+  return `<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${esc(titulo)}</title>
+<meta name="description" content="${esc(resumo)}">
+<link rel="canonical" href="${esc(url)}">
+<meta property="og:type" content="article">
+<meta property="og:title" content="${esc(titulo)}">
+<meta property="og:description" content="${esc(resumo)}">
+<meta property="og:url" content="${esc(url)}">
+<meta property="og:image" content="${esc(SITE)}og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<style>
+:root{color-scheme:light dark}
+body{margin:0;font:16px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:#fcfcfb;color:#0b0b0b}
+@media (prefers-color-scheme:dark){body{background:#1a1a19;color:#fff}a{color:#8ab8f5}dt,small{color:#c3c2b7!important}}
+main{max-width:640px;margin:0 auto;padding:32px 16px}
+h1{font-size:28px;line-height:1.2;margin:8px 0}
+dl{margin:24px 0}dt{font-size:13px;color:#52514e;margin-top:12px}dd{margin:0}
+small{color:#52514e}
+.botao{display:inline-block;padding:10px 18px;border-radius:8px;background:#0b0b0b;color:#fff;text-decoration:none;font-weight:600}
+@media (prefers-color-scheme:dark){.botao{background:#fff;color:#1a1a19}}
+</style>
+</head>
+<body>
+<main>
+<a href="../">Global Power Line</a>
+<h1>Quem governa ${esc(d.nome)}</h1>
+<p>${esc(resumo)}</p>
+<p><a class="botao" href="../#pais=${esc(d.iso)}">Abrir no mapa-múndi</a></p>
+<dl>
+${linhas.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('\n')}
+</dl>
+<p><small>Quem ocupa o cargo e o partido vêm da Wikidata, editada por voluntários. A faixa de esquerda e direita é a do partido de quem governa — não é uma nota do país. Dados coletados em ${esc((mundo.geradoEm ?? '').slice(0, 10).split('-').reverse().join('/'))}.</small></p>
+</main>
+</body>
+</html>
+`;
+}
+
+const paises = mundo?.paises ?? [];
+if (paises.length) {
+  await mkdir(new URL('pais/', DIST), { recursive: true });
+  for (const d of paises) await writeFile(new URL(`pais/${d.iso}.html`, DIST), paginaPais(d));
+}
+
 const hoje = brasil.geradoEm.slice(0, 10);
-const urls = [SITE, ...brasil.pessoas.map((p) => `${SITE}p/${p.id}.html`)];
+const urls = [SITE, ...paises.map((d) => `${SITE}pais/${d.iso}.html`), ...brasil.pessoas.map((p) => `${SITE}p/${p.id}.html`)];
 await writeFile(new URL('sitemap.xml', DIST),
   `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.map((u) => `<url><loc>${esc(u)}</loc><lastmod>${hoje}</lastmod></url>`).join('\n')}\n</urlset>\n`);
 // A pauta é ferramenta de bastidor, não conteúdo do site: fica fora da busca.
@@ -119,4 +212,4 @@ if (!html.includes('og:image')) {
   await writeFile(home, html);
 }
 
-console.log(`${brasil.pessoas.length} páginas, sitemap e robots em dist/ (site: ${SITE})`);
+console.log(`${paises.length} países + ${brasil.pessoas.length} pessoas, sitemap e robots em dist/ (site: ${SITE})`);

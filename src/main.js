@@ -1,9 +1,7 @@
 import { h, CARGOS, CARGO_ELEITO, escalaEspectro, posicaoDe, textoPartido, ondeAtua, fmtNum, fmtData, semAcento } from './comum.js';
 import { criarMapa } from './mapa.js';
-import { criarRede } from './rede.js';
 import { criarPainel } from './painel.js';
-import { criarPecs } from './pecs.js';
-import { criarMundo, corDoTempo } from './mundo.js';
+import { criarMundo, corDoTempo, corDaFaixa, FAIXAS_MUNDO } from './mundo.js';
 import { criarContagem } from './contagem.js';
 import { criarPresenca } from './presenca.js';
 
@@ -50,30 +48,33 @@ try {
   throw e;
 }
 
-// ---------- seleção: um caminho só pra mapa, rede, lista, busca e painel ----------
+// ---------- seleção: um caminho só pra mapa, lista, busca e painel ----------
 
 const acoes = {
   aoEscolherPessoa: (id) => selecionar({ pessoa: id, uf: dados.pessoaPorId.get(id).uf ?? null }),
   aoEscolherUf: (uf) => selecionar({ uf }),
   aoVerMinistros: () => selecionar({ ministros: true }),
-  aoVerMapa: () => abrirAba('mapa'),
-  aoEscolherPec: (pec) => selecionar({ pec }),
   aoEscolherPais: (pais) => selecionar({ pais }),
   aoVerBrasil: () => { abrirAba('mapa'); selecionar({}); },
+  aoAbrirPais: (pais) => { abrirAba('mundo'); mundoVis?.abrirPais(pais); },
   linkAtual: () => linkDe(selecaoAtual),
   carregarMalhaUf: (uf) => carregar(`malhas/${uf}.json`),
+  carregarDivisoes: (iso) => carregar(`div/${iso}.json`),
 };
 
 const mapa = criarMapa(document.getElementById('vis-mapa'), dados, acoes);
-const rede = criarRede(document.getElementById('vis-rede'), dados, acoes);
 const painel = criarPainel(document.getElementById('painel'), dados, acoes);
 criarContagem(document.getElementById('contagem'), dados);
 criarPresenca(document.getElementById('presenca'));
-const abaPecs = criarPecs(document.getElementById('vis-pecs'), dados, acoes);
-// A aba Mundo só existe se os dois arquivos do mundo tiverem chegado.
+// A aba Mundo só existe se os dois arquivos do mundo tiverem chegado. Faltando
+// um deles, ela sai da barra em vez de abrir vazia como aba inicial.
 const mundoVis = dados.mundo && dados.mundoMalha ? criarMundo(document.getElementById('vis-mundo'), dados, acoes) : null;
-if (!mundoVis) document.querySelector('.abas [data-aba="mundo"]')?.remove();
-else document.getElementById('vis-mundo').addEventListener('modo', desenharLegenda);
+if (!mundoVis) {
+  document.querySelector('.abas [data-aba="mundo"]')?.remove();
+  document.getElementById('vis-mundo').remove();
+  document.querySelector('.abas [data-aba="mapa"]').setAttribute('aria-selected', 'true');
+  document.getElementById('vis-mapa').hidden = false;
+} else document.getElementById('vis-mundo').addEventListener('modo', desenharLegenda);
 
 let selecaoAtual = {};
 // Endereço do que está aberto, pra dar pra mandar o recorte pra alguém.
@@ -81,7 +82,6 @@ let selecaoAtual = {};
 export function enderecoDe(sel = selecaoAtual) {
   if (sel.pais) return `#pais=${sel.pais}`;
   if (sel.pessoa) return `#p=${encodeURIComponent(sel.pessoa)}`;
-  if (sel.pec) return `#pec=${encodeURIComponent(sel.pec)}`;
   if (sel.uf) return `#uf=${sel.uf}`;
   if (sel.ministros) return '#ministros';
   return `#${document.querySelector('.abas [aria-selected="true"]').dataset.aba}`;
@@ -91,14 +91,11 @@ const linkDe = (sel) => location.href.split('#')[0] + enderecoDe(sel);
 function selecionar(sel, mexerNoEndereco = true) {
   selecaoAtual = sel;
   mapa.selecionar(sel);
-  rede.selecionar(sel);
-  abaPecs.selecionar(sel);
   mundoVis?.selecionar(sel);
   if (sel.pais) painel.pais(sel.pais);
   else if (sel.pessoa) painel.pessoa(sel.pessoa);
   else if (sel.uf) painel.uf(sel.uf);
   else if (sel.ministros) painel.ministros();
-  else if (sel.pec) painel.pec(sel.pec);
   else painel.resumo(document.querySelector('.abas [aria-selected="true"]')?.dataset.aba === 'mundo');
   if (mexerNoEndereco) history.replaceState(null, '', enderecoDe(sel));
   // No celular o painel fica abaixo da visualização.
@@ -111,7 +108,6 @@ function pintar() {
   const escala = escalaEspectro();
   mapa.pintar(escala);
   mundoVis?.pintar();
-  rede.pintar(escala);
   desenharLegenda();
 }
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change', pintar);
@@ -131,8 +127,9 @@ for (const b of document.querySelectorAll('.tema button')) b.addEventListener('c
 function desenharLegenda() {
   const aba = document.querySelector('.abas [aria-selected="true"]').dataset.aba;
   const el = document.getElementById('legenda');
-  el.hidden = aba === 'lista' || aba === 'pecs';
-  // O mundo tem legenda própria: ali a cor mede tempo, não ideologia.
+  el.hidden = aba === 'lista';
+  // O mundo tem legenda própria: lá a cor é a faixa do partido que governa, e
+  // "governa sem partido" é categoria de verdade, não dado faltando.
   if (aba === 'mundo' && mundoVis) {
     const escuro = getComputedStyle(document.documentElement).colorScheme.includes('dark');
     if (mundoVis.modo === 'tempo') {
@@ -141,21 +138,24 @@ function desenharLegenda() {
           h('span', { class: 'legenda-tempo' }, [2, 7, 15, 25, 40].map((a) => h('i', { style: `background:${corDoTempo(a, escuro)}`, title: `${a} anos` }))),
           h('span', {}, 'de menos de 4 a mais de 20')),
         h('div', { class: 'legenda-item' }, h('span', { class: 'legenda-hachura' }), h('span', {}, 'Sem data de posse')));
-    } else {
-      el.replaceChildren(
-        h('div', { class: 'legenda-item' }, h('span', {}, 'esquerda'), h('span', { class: 'legenda-rampa' }), h('span', {}, 'direita')),
-        h('div', { class: 'legenda-item' }, h('span', { class: 'legenda-hachura' }), h('span', {}, 'Sem posição conhecida')),
-        h('div', { class: 'legenda-item fraco' }, 'Posição do partido que governa, por survey com especialistas de 2019 — partido criado depois não tem nota'));
+      return;
     }
+    const escala = escalaEspectro();
+    el.replaceChildren(
+      h('div', { class: 'legenda-item legenda-faixas' }, FAIXAS_MUNDO.map((f) =>
+        h('span', { class: 'legenda-faixa' },
+          h('i', { style: `background:${corDaFaixa(f.chave, escala)}` }), f.rotulo))),
+      h('div', { class: 'legenda-item' },
+        h('span', { class: 'legenda-cor', style: 'background:var(--sem-partido)' }), h('span', {}, 'Governa sem partido'),
+        h('span', { class: 'legenda-hachura' }), h('span', {}, 'Partido sem posição conhecida')),
+      h('div', { class: 'legenda-item fraco' }, 'Faixa do partido de quem governa hoje. Não é nota do país: quem se classifica é partido, e a ficha diz de onde veio cada faixa.'));
     return;
   }
   el.replaceChildren(
     h('div', { class: 'legenda-item' },
       h('span', {}, 'esquerda'), h('span', { class: 'legenda-rampa' }), h('span', {}, 'direita')),
     h('div', { class: 'legenda-item' }, h('span', { class: 'legenda-hachura' }), h('span', {}, 'Sem partido ou não informado')),
-    aba === 'mapa'
-      ? h('div', { class: 'legenda-item fraco' }, 'Cor: partido do governador ou, nos municípios, do prefeito eleito em 2024')
-      : h('div', { class: 'legenda-item fraco' }, 'Cada bolinha é uma pessoa, ordenada da esquerda para a direita dentro do grupo. Cinza liso: cargo sem partido.'));
+    h('div', { class: 'legenda-item fraco' }, 'Cor: partido do governador ou, nos municípios, do prefeito eleito em 2024'));
 }
 
 // ---------- lista (a visão em tabela dos mesmos dados) ----------
@@ -193,12 +193,12 @@ const redesenharLista = criarLista(document.getElementById('vis-lista'));
 
 function abrirAba(nome) {
   for (const b of document.querySelectorAll('.abas button')) b.setAttribute('aria-selected', String(b.dataset.aba === nome));
-  for (const a of ['mundo', 'mapa', 'rede', 'lista', 'pecs']) document.getElementById(`vis-${a}`).hidden = a !== nome;
+  for (const a of ['mundo', 'mapa', 'lista']) { const el = document.getElementById(`vis-${a}`); if (el) el.hidden = a !== nome; }
   // Trocar de aba sem nada aberto volta o endereço pra aba; com algo aberto,
   // o recorte continua valendo e o endereço fica como está.
-  if (enderecoDe().startsWith('#' + nome) || /^#(mapa|rede|lista|pecs)$/.test(location.hash)) history.replaceState(null, '', `#${nome}`);
+  if (enderecoDe().startsWith('#' + nome) || /^#(mundo|mapa|lista)$/.test(location.hash)) history.replaceState(null, '', `#${nome}`);
   desenharLegenda();
-  if (!selecaoAtual.pessoa && !selecaoAtual.uf && !selecaoAtual.pec && !selecaoAtual.pais && !selecaoAtual.ministros) painel.resumo(nome === 'mundo');
+  if (!selecaoAtual.pessoa && !selecaoAtual.uf && !selecaoAtual.pais && !selecaoAtual.ministros) painel.resumo(nome === 'mundo');
 }
 for (const b of document.querySelectorAll('.abas button')) b.addEventListener('click', () => abrirAba(b.dataset.aba));
 
@@ -238,7 +238,6 @@ document.getElementById('metodologia').append(
     h('li', {}, 'Prefeitos: ', link('resultado oficial do TSE', 'https://resultados.tse.jus.br/'), ' da eleição de 2024. É quem foi eleito, não necessariamente quem está no cargo hoje.'),
     h('li', {}, 'Eleitos em 2026 que ainda não assumiram aparecem na busca e na lista como “Eleito(a) em 2026”, com aviso na ficha. A posse é em janeiro (governadores) e fevereiro (Congresso) de 2027.'),
     h('li', {}, 'Transição 2027 (⇄): ', link('resultado oficial do TSE', 'https://resultados.tse.jus.br/'), ' da eleição de 2026, cruzado pelo nome com quem está no cargo hoje. Nomes escritos de forma diferente nas duas fontes podem não casar, e aí a pessoa aparece como "sai" por engano.'),
-    h('li', {}, 'PECs: ', link('Dados Abertos da Câmara', 'https://dadosabertos.camara.leg.br/'), ' e do Senado. Só votações nominais de plenário; as simbólicas não registram voto individual.'),
     h('li', {}, 'Mapa e lista de estados: ', link('IBGE', 'https://servicodados.ibge.gov.br/api/docs/'), '.')),
   h('h4', {}, 'Esquerda × direita'),
   h('p', {}, 'Não existe medida oficial. O site mostra duas coisas separadas e diz qual é qual:'),
@@ -246,8 +245,16 @@ document.getElementById('metodologia').append(
     h('li', {}, h('b', {}, 'Posição do partido: '), dados.fontePartidos, ' A porcentagem é só essa nota convertida (nota 7 = 70% direita). Vale para o partido inteiro, não para a pessoa. Nas cores, o vermelho e o azul cheios aparecem a partir de 2 e de 8: no intervalo todo, como nenhum partido com gente em cargo chega perto das pontas, tudo sairia cinzento.'),
     h('li', {}, h('b', {}, 'Voto no plenário (só senadores): '), `nas votações nominais em que a maioria do ${dados.votos.poloEsquerda} e a maioria do ${dados.votos.poloDireita} ficaram em lados opostos, de que lado o senador votou. Mede alinhamento de voto, não ideologia.`)),
   h('h4', {}, 'O mundo'),
-  h('p', {}, 'Quem governa cada país e desde quando vêm da ', link('Wikidata', 'https://www.wikidata.org/'), ', editada por voluntários: em país com troca rápida de governo ela pode estar atrasada, e cada ficha leva ao item de lá para conferir e corrigir. A posição de esquerda e direita vem do ', link('Global Party Survey 2019', 'https://doi.org/10.7910/DVN/WMGTNS'), ', survey com cientistas políticos de cada país, em domínio público — cobre 92 dos 195 e não inclui partido criado depois de 2019.'),
+  h('p', {}, 'Quem governa cada país e desde quando vêm da ', link('Wikidata', 'https://www.wikidata.org/'), ', editada por voluntários: em país com troca rápida de governo ela pode estar atrasada, e cada ficha leva ao item de lá para conferir e corrigir. As divisões internas dos países são da ', link('Natural Earth', 'https://www.naturalearthdata.com/'), ', em domínio público; o nível não é o mesmo em todo lugar, são os 51 estados dos Estados Unidos mas também os 232 condados do Reino Unido.'),
+  h('p', {}, 'A faixa de esquerda e direita é a do partido de quem governa hoje, e sai de quatro fontes, nesta ordem, com a ficha de cada país dizendo qual foi usada:'),
+  h('ul', {},
+    h('li', {}, h('b', {}, 'Classificação da Wikidata '), 'para o partido. É editada e corrigida, então acompanha partido que se move.'),
+    h('li', {}, h('b', {}, 'Global Party Survey 2019 '), '(', link('Pippa Norris', 'https://doi.org/10.7910/DVN/WMGTNS'), '), survey com cientistas políticos, em domínio público. Dá um número de 0 a 10, mas é de 2019: o Partido Trabalhista britânico está lá com 2,1, do tempo do Corbyn. Por isso vem depois da Wikidata, e não antes.'),
+    h('li', {}, h('b', {}, 'Correntes declaradas pelo partido '), 'na Wikidata — comunismo, social-democracia, conservadorismo e afins. Sem isso, país de partido único ficava sem cor: o Partido Comunista da China não tem classificação pronta, mas declara comunismo e marxismo-leninismo. Fica de fora, de propósito, tudo que é ortogonal ao eixo: autoritarismo, populismo, militarismo, nacionalismo étnico. Um partido pode ser autoritário em qualquer parte do espectro.'),
+    h('li', {}, h('b', {}, 'Classificação deste site '), 'para um punhado de partidos que nenhuma das três alcança. A ficha mostra o motivo e a fonte.')),
+  h('p', {}, h('b', {}, 'Governa sem partido '), 'não é falta de dado, é um fato — e por três motivos bem diferentes: monarquia onde partido é proibido, junta ou governo de transição, e presidente eleito sem filiação formal, comum na América Latina. Nos três casos não existe posição de partido pra mostrar, e por isso eles têm cor própria, fora da régua.'),
   h('p', {}, 'Duas ressalvas que mudam a leitura do mapa. A primeira: ninguém classifica país, classifica partido — a cor mostra a posição de quem governa hoje, não uma medida do país. A segunda: o número do mundo e o do Brasil vêm de estudos diferentes, na mesma régua de 0 a 10 e na mesma direção, mas não devem ser comparados número a número.'),
+  h('p', {}, 'Quando os dois chefes são de partidos diferentes, quem conta é o chefe de governo — na Alemanha, o chanceler. Quando são do mesmo partido, o chefe de Estado: na China quem manda é Xi Jinping, não o primeiro-ministro.'),
   h('p', {}, 'No modo “tempo no poder”, monarca hereditário fica fora do ranking: herdar o trono não é a mesma coisa que não sair do poder.'),
   h('h4', {}, 'As cinco faixas'),
   h('p', {}, 'Esquerda até 3, centro-esquerda até 4,5, centro até 5,5, centro-direita até 7, direita acima disso. Os cortes são escolha deste site: o artigo dá uma nota por partido e não divide em faixas. Foram postos onde a distribuição real tem folga — não existe partido com gente em cargo entre 5,3 e 6,3 —, e não em quintos iguais da régua. Nos posts a conta é só de dois lados, abaixo ou acima de 5.'),
@@ -281,7 +288,6 @@ carregar('prefeitos.json').then((prefeitos) => {
 }).finally(() => {
   pintar();
   redesenharLista();
-  rede.atualizarPrefeitos();
   if (location.hash.startsWith('#p=') && !selecaoAtual.pessoa) abrirEndereco();
   else if (selecaoAtual.uf && !selecaoAtual.pessoa) painel.uf(selecaoAtual.uf);
 });
@@ -289,29 +295,30 @@ carregar('prefeitos.json').then((prefeitos) => {
 let temaSalvo = null;
 try { temaSalvo = localStorage.getItem('tema'); } catch { /* modo privado */ }
 aplicarTema(temaSalvo === 'claro' || temaSalvo === 'escuro' ? temaSalvo : 'sistema');
-painel.resumo();
+painel.resumo(Boolean(mundoVis));
 // Abre o recorte que vier no endereço. Vale tanto pro link que alguém
 // compartilhou quanto pras páginas estáticas que os buscadores indexam.
 // Prefeito só existe depois que prefeitos.json carrega, e aí o caso é
 // retomado quando aquele arquivo chega.
 function abrirEndereco() {
   const h = location.hash.slice(1);
-  if (['mundo', 'rede', 'lista', 'pecs', 'mapa'].includes(h)) return abrirAba(h);
+  if (['mundo', 'mapa', 'lista'].includes(h)) return abrirAba(h);
   const [chave, bruto] = h.split('=');
   const valor = bruto && decodeURIComponent(bruto);
   if (chave === 'p' && dados.pessoaPorId.has(valor)) return acoes.aoEscolherPessoa(valor);
   if (chave === 'uf' && dados.ufPorSigla.has(valor)) return acoes.aoEscolherUf(valor);
   if (chave === 'ministros') return acoes.aoVerMinistros();
   if (chave === 'pais' && mundoVis) { abrirAba('mundo'); return acoes.aoEscolherPais(valor); }
-  if (chave === 'pec' && dados.pecs) { abrirAba('pecs'); return selecionar({ pec: valor }); }
   return null;
 }
 abrirEndereco();
 addEventListener('hashchange', abrirEndereco);
 
-// ---------- PECs (carregadas depois, como os prefeitos) ----------
+// ---------- PECs (arquivo grande, carregado depois, como os prefeitos) ----------
 
-carregar('pecs.json').then((pecs) => { dados.pecs = pecs; if (location.hash.startsWith('#pec=')) abrirEndereco(); }).catch(() => { dados.pecs = null; }).finally(() => {
-  abaPecs.atualizar();
-  if (selecaoAtual.pessoa) painel.pessoa(selecaoAtual.pessoa);
-});
+// A aba de PECs saiu, mas o dado continua: é dele que sai, na ficha de cada
+// senador, como a pessoa votou em cada emenda.
+carregar('pecs.json')
+  .then((pecs) => { dados.pecs = pecs; })
+  .catch(() => { dados.pecs = null; })
+  .finally(() => { if (selecaoAtual.pessoa) painel.pessoa(selecaoAtual.pessoa); });
