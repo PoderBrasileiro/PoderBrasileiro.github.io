@@ -408,8 +408,14 @@ export function criarPainel(raiz, dados, { aoEscolherPessoa, aoEscolherUf, aoVer
       manual: 'Classificação deste site — a Wikidata não traz nenhuma, ou quem governa não tem partido:',
     };
 
+    // A explicação do arquivo manual é do PAÍS, não do cargo: quando vale pros
+    // dois chefes, sai só no primeiro bloco. Repetida duas vezes, o mesmo
+    // parágrafo longo ocupava metade do painel da Rússia.
+    let motivoJaDito = null;
     const bloco = (titulo, c) => {
       if (!c) return null;
+      const repetido = c.motivo != null && c.motivo === motivoJaDito;
+      if (c.motivo) motivoJaDito = c.motivo;
       const tempo = anos(c.desde);
       return h('section', {}, h('h3', {}, titulo),
         h('p', {}, h('b', {}, c.nome)),
@@ -422,8 +428,8 @@ export function criarPainel(raiz, dados, { aoEscolherPessoa, aoEscolherUf, aoVer
                 h('p', { class: 'numero' }, h('b', {}, fmtNum(c.posicao, 1)), ' de 10 na régua esquerda–direita'),
                 regua(c.posicao / 10, ['esquerda', 'direita']))
               : null,
-            h('p', { class: 'fraco' }, ORIGEM[c.faixaFonte] ?? ''),
-            c.motivo ? h('p', { class: 'fraco' }, c.motivo, c.motivoFonte ? [' ', h('a', { href: c.motivoFonte, target: '_blank', rel: 'noopener noreferrer' }, 'Fonte ↗')] : null) : null,
+            repetido ? null : h('p', { class: 'fraco' }, ORIGEM[c.faixaFonte] ?? ''),
+            c.motivo && !repetido ? h('p', { class: 'fraco' }, c.motivo, c.motivoFonte ? [' ', h('a', { href: c.motivoFonte, target: '_blank', rel: 'noopener noreferrer' }, 'Fonte ↗')] : null) : null,
             c.partidoNoSurvey && c.partidoNoSurvey !== c.partido
               ? h('p', { class: 'fraco' }, `No survey o partido aparece como “${c.partidoNoSurvey}”.`) : null)
           : c.semPartido
