@@ -1,4 +1,4 @@
-# Pauta de 12/11/2026
+# Pauta de 13/11/2026
 
 Mais fácil pela página: https://poderbrasileiro.github.io/pauta/
 

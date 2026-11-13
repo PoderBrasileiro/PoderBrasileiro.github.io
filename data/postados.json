@@ -114,7 +114,8 @@
   "camara-2538269": "plenario",
   "senado-172997": "plenario",
   "camara-351184": "plenario",
-  "camara-2543145": "plenario"
+  "camara-2543145": "plenario",
+  "camara-2544926": "plenario"
  },
  "composicao": {
   "cargo": "ministro",
@@ -299,7 +300,7 @@
   ]
  },
  "pautaDoDia": {
-  "data": "2026-11-12",
+  "data": "2026-11-13",
   "itens": []
  }
 }
