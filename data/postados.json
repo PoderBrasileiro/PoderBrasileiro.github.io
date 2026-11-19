@@ -115,7 +115,8 @@
   "senado-172997": "plenario",
   "camara-351184": "plenario",
   "camara-2543145": "plenario",
-  "camara-2544926": "plenario"
+  "camara-2544926": "plenario",
+  "camara-2270800": "comissao"
  },
  "composicao": {
   "cargo": "ministro",
@@ -296,11 +297,42 @@
    "pec:senado-172997:2026-11-03:146",
    "pec:senado-172997:2026-11-03:128",
    "pec:senado-172997:2026-11-03:117",
-   "pec:senado-172997:2026-11-03:123"
+   "pec:senado-172997:2026-11-03:123",
+   "pec:camara-2270800:2025-09-16:50",
+   "pec:camara-2270800:2025-09-16:135",
+   "pec:camara-2270800:2025-09-16:232",
+   "pec:camara-2270800:2025-09-16:62",
+   "pec:camara-2270800:2025-09-16:62",
+   "pec:camara-2270800:2025-09-16:195"
   ]
  },
  "pautaDoDia": {
-  "data": "2026-11-18",
-  "itens": []
+  "data": "2026-11-19",
+  "itens": [
+   {
+    "tipo": "Votação de PEC",
+    "texto": "PEC 3/2021 — VOTADA no plenário da Câmara em 16/09/2025.\nSim 296 · Não 174\n\nAltera os arts. 14, 27, 53, 102 e 105 da Constituição Federal, para dispor sobre as prerrogativas parlamentares e dá outras providências.\n\nTramitação e votos nominais: https://www.camara.leg.br/proposicoesWeb/fichadetramitacao?idProposicao=2270800\n#PEC #Câmara #Congresso"
+   },
+   {
+    "tipo": "Votação de PEC",
+    "texto": "PEC 3/2021 — APROVADA no plenário da Câmara em 16/09/2025.\nSim 344 · Não 133\n\nAltera os arts. 14, 27, 53, 102 e 105 da Constituição Federal, para dispor sobre as prerrogativas parlamentares e dá outras providências.\n\nTramitação e votos nominais: https://www.camara.leg.br/proposicoesWeb/fichadetramitacao?idProposicao=2270800\n#PEC #Câmara #Congresso"
+   },
+   {
+    "tipo": "Votação de PEC",
+    "texto": "PEC 3/2021 — APROVADA no plenário da Câmara em 16/09/2025.\nSim 332 · Não 117\n\nAltera os arts. 14, 27, 53, 102 e 105 da Constituição Federal, para dispor sobre as prerrogativas parlamentares e dá outras providências.\n\nTramitação e votos nominais: https://www.camara.leg.br/proposicoesWeb/fichadetramitacao?idProposicao=2270800\n#PEC #Câmara #Congresso"
+   },
+   {
+    "tipo": "Votação de PEC",
+    "texto": "PEC 3/2021 — VOTADA no plenário da Câmara em 16/09/2025.\nSim 317 · Não 156\n\nAltera os arts. 14, 27, 53, 102 e 105 da Constituição Federal, para dispor sobre as prerrogativas parlamentares e dá outras providências.\n\nTramitação e votos nominais: https://www.camara.leg.br/proposicoesWeb/fichadetramitacao?idProposicao=2270800\n#PEC #Câmara #Congresso"
+   },
+   {
+    "tipo": "Votação de PEC",
+    "texto": "PEC 3/2021 — VOTADA no plenário da Câmara em 16/09/2025.\nSim 322 · Não 147\n\nAltera os arts. 14, 27, 53, 102 e 105 da Constituição Federal, para dispor sobre as prerrogativas parlamentares e dá outras providências.\n\nTramitação e votos nominais: https://www.camara.leg.br/proposicoesWeb/fichadetramitacao?idProposicao=2270800\n#PEC #Câmara #Congresso"
+   },
+   {
+    "tipo": "Votação de PEC",
+    "texto": "PEC 3/2021 — APROVADA no plenário da Câmara em 16/09/2025.\nSim 353 · Não 134\n\nAltera os arts. 14, 27, 53, 102 e 105 da Constituição Federal, para dispor sobre as prerrogativas parlamentares e dá outras providências.\n\nTramitação e votos nominais: https://www.camara.leg.br/proposicoesWeb/fichadetramitacao?idProposicao=2270800\n#PEC #Câmara #Congresso"
+   }
+  ]
  }
 }
