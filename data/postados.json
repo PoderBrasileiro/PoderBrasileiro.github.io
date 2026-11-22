@@ -117,7 +117,12 @@
   "camara-2543145": "plenario",
   "camara-2544926": "plenario",
   "camara-2270800": "comissao",
-  "camara-2551011": "plenario"
+  "camara-2551011": "plenario",
+  "camara-1228863": "comissao",
+  "camara-522713": "comissao",
+  "camara-519258": "comissao",
+  "camara-2142844": "comissao",
+  "camara-2086981": "comissao"
  },
  "composicao": {
   "cargo": "ministro",
@@ -308,7 +313,7 @@
   ]
  },
  "pautaDoDia": {
-  "data": "2026-11-21",
+  "data": "2026-11-22",
   "itens": []
  }
 }
